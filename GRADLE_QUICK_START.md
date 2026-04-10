@@ -13,12 +13,12 @@ This project uses **Gradle** as the build system. No Gradle installation is requ
 
 ```bash
 # Unix/Linux/macOS
-./gradlew clean build
+./gradlew clean build --no-daemon
 
 # Windows
-gradlew.bat clean build
+gradlew.bat clean build --no-daemon
 
-# Or use the build script
+# Or use the build script (automatically uses --no-daemon)
 ./src/java/build.sh
 ```
 
@@ -26,26 +26,28 @@ gradlew.bat clean build
 
 ```bash
 # Clean build artifacts
-./gradlew clean
+./gradlew clean --no-daemon
 
 # Compile Java sources only
-./gradlew compileJava
+./gradlew compileJava --no-daemon
 
 # Build JAR files (includes fatJar)
-./gradlew build
+./gradlew build --no-daemon
 
 # Run the application
-./gradlew run --args="-c config.properties -l extract.log"
+./gradlew run --no-daemon --args="-c config.properties -l extract.log"
 
 # Display project information
-./gradlew info
+./gradlew info --no-daemon
 
 # List all available tasks
-./gradlew tasks
+./gradlew tasks --no-daemon
 
 # List all dependencies
-./gradlew dependencies
+./gradlew dependencies --no-daemon
 ```
+
+**Note**: The `--no-daemon` flag is recommended for z/OS and CI/CD environments to avoid daemon process issues.
 
 ## Build Outputs
 
@@ -84,7 +86,7 @@ java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$
 ### Using Gradle Run Task
 
 ```bash
-./gradlew run --args="-c /path/to/config.properties -l /path/to/extract.log"
+./gradlew run --no-daemon --args="-c /path/to/config.properties -l /path/to/extract.log"
 ```
 
 ## Gradle Wrapper
@@ -107,7 +109,7 @@ On first run, Gradle Wrapper will:
 To update to a newer Gradle version:
 
 ```bash
-./gradlew wrapper --gradle-version=8.6
+./gradlew wrapper --gradle-version=8.6 --no-daemon
 ```
 
 ## Project Structure
@@ -159,18 +161,20 @@ export JZOS_HOME=/usr/lpp/IBM/izoda/v1r1/IBM/jzos
 ### Gradle Daemon Issues
 
 ```bash
-# Stop all Gradle daemons
+# Stop all Gradle daemons (if any are running)
 ./gradlew --stop
 
-# Run with --no-daemon
+# Run with --no-daemon (recommended for z/OS)
 ./gradlew build --no-daemon
 ```
+
+**Note**: All build scripts in this project use `--no-daemon` by default.
 
 ### Clean Everything
 
 ```bash
 # Clean build artifacts
-./gradlew clean
+./gradlew clean --no-daemon
 
 # Also clean Gradle cache (use with caution)
 rm -rf ~/.gradle/caches/

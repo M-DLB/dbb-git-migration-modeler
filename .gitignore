@@ -1,7 +1,11 @@
 # Gradle
 .gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle wrapper (not used - using system Gradle)
+gradle/
+gradlew
+gradlew.bat
 
 # Maven (legacy)
 target/

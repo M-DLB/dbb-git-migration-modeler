@@ -53,12 +53,12 @@ The project includes Gradle Wrapper, so you don't need to install Gradle separat
 
 ```bash
 # Build the project (Unix/Linux/macOS)
-./gradlew clean build
+./gradlew clean build --no-daemon
 
 # Build the project (Windows)
-gradlew.bat clean build
+gradlew.bat clean build --no-daemon
 
-# Or use the build script
+# Or use the build script (automatically uses --no-daemon)
 ./src/java/build.sh
 
 # This creates:
@@ -80,20 +80,22 @@ gradlew.bat clean build
 
 ```bash
 # Clean build artifacts
-./gradlew clean
+./gradlew clean --no-daemon
 
 # Compile Java sources
-./gradlew compileJava
+./gradlew compileJava --no-daemon
 
 # Build JAR files
-./gradlew build
+./gradlew build --no-daemon
 
 # Display project information
-./gradlew info
+./gradlew info --no-daemon
 
 # List all available tasks
-./gradlew tasks
+./gradlew tasks --no-daemon
 ```
+
+**Note**: The `--no-daemon` flag is used to prevent daemon processes, which is recommended for z/OS and CI/CD environments.
 
 ## Running the Application
 
