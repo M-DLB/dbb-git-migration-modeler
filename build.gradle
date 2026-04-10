@@ -38,14 +38,25 @@ dependencies {
     // SnakeYAML for YAML parsing
     implementation 'org.yaml:snakeyaml:2.0'
     
-    // IBM JZOS for z/OS operations (provided by z/OS environment)
-    compileOnly fileTree(dir: System.getenv('JZOS_HOME') ?: '/usr/lpp/IBM/izoda/v1r1/IBM/jzos', include: ['**/*.jar'])
+    // IBM JZOS for z/OS operations
+    // Priority: 1) Local lib/jzos, 2) JZOS_HOME env var, 3) Default z/OS path
+    if (new File('lib/jzos').exists()) {
+        compileOnly fileTree(dir: 'lib/jzos', include: ['**/*.jar'])
+    } else if (System.getenv('JZOS_HOME') && new File(System.getenv('JZOS_HOME')).exists()) {
+        compileOnly fileTree(dir: System.getenv('JZOS_HOME'), include: ['**/*.jar'])
+    } else if (new File('/usr/lpp/IBM/izoda/v1r1/IBM/jzos').exists()) {
+        compileOnly fileTree(dir: '/usr/lpp/IBM/izoda/v1r1/IBM/jzos', include: ['**/*.jar'])
+    }
     
-    // IBM DBB for build operations (provided by DBB installation)
-    compileOnly fileTree(dir: System.getenv('DBB_HOME') ?: '/var/dbb', include: ['lib/**/*.jar'])
-    
-    // IBM DMH Scanner for file classification (provided by DBB installation)
-    compileOnly fileTree(dir: System.getenv('DBB_HOME') ?: '/var/dbb', include: ['lib/**/*.jar'])
+    // IBM DBB for build operations
+    // Priority: 1) Local lib/dbb, 2) DBB_HOME env var, 3) Default z/OS path
+    if (new File('lib/dbb').exists()) {
+        compileOnly fileTree(dir: 'lib/dbb', include: ['**/*.jar'])
+    } else if (System.getenv('DBB_HOME') && new File(System.getenv('DBB_HOME')).exists()) {
+        compileOnly fileTree(dir: System.getenv('DBB_HOME'), include: ['lib/**/*.jar'])
+    } else if (new File('/var/dbb').exists()) {
+        compileOnly fileTree(dir: '/var/dbb', include: ['lib/**/*.jar'])
+    }
     
     // JUnit for testing
     testImplementation 'junit:junit:4.13.2'
