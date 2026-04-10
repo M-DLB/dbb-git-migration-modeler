@@ -60,7 +60,7 @@ sdk install gradle 8.5
 
 # Initialize wrapper
 cd /path/to/project
-gradle wrapper --gradle-version=8.5
+gradle wrapper --gradle-version=8.5 --no-daemon
 ```
 
 #### On Ubuntu/Debian
@@ -71,7 +71,7 @@ sudo apt-get install gradle
 
 # Initialize wrapper
 cd /path/to/project
-gradle wrapper --gradle-version=8.5
+gradle wrapper --gradle-version=8.5 --no-daemon
 ```
 
 #### On macOS
@@ -81,7 +81,7 @@ brew install gradle
 
 # Initialize wrapper
 cd /path/to/project
-gradle wrapper --gradle-version=8.5
+gradle wrapper --gradle-version=8.5 --no-daemon
 ```
 
 ### Solution 3: Use System Gradle Without Wrapper
@@ -90,9 +90,9 @@ If you have Gradle installed, you can build directly without the wrapper:
 
 ```bash
 # Instead of ./gradlew
-gradle clean build
+gradle clean build --no-daemon
 
-# The build.sh script will automatically detect and use system Gradle
+# The build.sh script will automatically detect and use system Gradle with --no-daemon
 ./src/java/build.sh
 ```
 
@@ -118,7 +118,7 @@ cd ../..
 chmod +x gradlew
 
 # Now you can use the wrapper
-./gradlew clean build
+./gradlew clean build --no-daemon
 ```
 
 ## Verification
@@ -132,7 +132,7 @@ gradle --version
 ./gradlew --version
 
 # Build the project
-./gradlew clean build
+./gradlew clean build --no-daemon
 # or
 ./src/java/build.sh
 ```
@@ -194,11 +194,11 @@ If you continue to have issues:
 | Task | Command |
 |------|---------|
 | Initialize wrapper | `./init-gradle.sh` |
-| Build with wrapper | `./gradlew clean build` |
-| Build with system Gradle | `gradle clean build` |
+| Build with wrapper | `./gradlew clean build --no-daemon` |
+| Build with system Gradle | `gradle clean build --no-daemon` |
 | Build with script | `./src/java/build.sh` |
 | Check Gradle version | `gradle --version` |
-| List Gradle tasks | `./gradlew tasks` |
+| List Gradle tasks | `./gradlew tasks --no-daemon` |
 
 ## Support
 

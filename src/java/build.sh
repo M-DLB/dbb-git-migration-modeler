@@ -43,44 +43,38 @@ cd "$PROJECT_ROOT"
 echo "Building project in: $PROJECT_ROOT"
 echo ""
 
-# Check if Gradle wrapper JAR exists
-if [ ! -f "$PROJECT_ROOT/gradle/wrapper/gradle-wrapper.jar" ]; then
-    echo "WARNING: Gradle wrapper JAR not found"
+# Check if Gradle is installed
+if ! command -v gradle &> /dev/null; then
+    echo "ERROR: Gradle is not installed or not in PATH"
     echo ""
-    echo "The Gradle wrapper needs to be initialized first."
+    echo "Please install Gradle first:"
     echo ""
-    echo "Option 1: Initialize wrapper (requires Gradle installed)"
-    echo "  ./init-gradle.sh"
+    echo "Option 1: Using SDKMAN (recommended)"
+    echo "  curl -s \"https://get.sdkman.io\" | bash"
+    echo "  source \"\$HOME/.sdkman/bin/sdkman-init.sh\""
+    echo "  sdk install gradle"
     echo ""
-    echo "Option 2: Use system Gradle directly"
-    echo "  gradle clean build"
+    echo "Option 2: Manual download"
+    echo "  Download from: https://gradle.org/releases/"
+    echo "  Extract and add to PATH"
     echo ""
-    echo "Option 3: Install Gradle"
-    echo "  See: https://gradle.org/install/"
+    echo "Option 3: Using package manager"
+    echo "  - Ubuntu/Debian: sudo apt-get install gradle"
+    echo "  - macOS: brew install gradle"
+    echo "  - RHEL/CentOS: sudo yum install gradle"
     echo ""
-    
-    # Try to use system gradle if available
-    if command -v gradle &> /dev/null; then
-        echo "Found system Gradle, using it instead..."
-        echo "Running: gradle clean build"
-        gradle clean build
-        BUILD_RESULT=$?
-    else
-        echo "ERROR: Neither Gradle wrapper nor system Gradle found"
-        echo "Please run: ./init-gradle.sh"
-        exit 1
-    fi
-else
-    # Make gradlew executable
-    chmod +x gradlew 2>/dev/null || true
-    
-    # Clean and build
-    echo "Running: ./gradlew clean build"
-    ./gradlew clean build
-    BUILD_RESULT=$?
+    exit 1
 fi
 
-if [ $BUILD_RESULT -eq 0 ]; then
+GRADLE_VERSION=$(gradle --version | grep "Gradle" | awk '{print $2}')
+echo "Using Gradle version: $GRADLE_VERSION"
+echo ""
+
+# Clean and build
+echo "Running: gradle clean build --no-daemon"
+gradle clean build --no-daemon
+
+if [ $? -eq 0 ]; then
     echo ""
     echo "=========================================="
     echo "Build Successful!"

@@ -50,8 +50,8 @@ cd "$SCRIPT_DIR"
 echo "Initializing Gradle wrapper in: $SCRIPT_DIR"
 echo ""
 
-# Generate wrapper
-gradle wrapper --gradle-version=8.5
+# Generate wrapper with --no-daemon flag
+gradle wrapper --gradle-version=8.5 --no-daemon
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -60,7 +60,7 @@ if [ $? -eq 0 ]; then
     echo "=========================================="
     echo ""
     echo "You can now build the project using:"
-    echo "  ./gradlew clean build"
+    echo "  ./gradlew clean build --no-daemon"
     echo ""
     echo "Or use the build script:"
     echo "  ./src/java/build.sh"
