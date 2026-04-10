@@ -43,14 +43,44 @@ cd "$PROJECT_ROOT"
 echo "Building project in: $PROJECT_ROOT"
 echo ""
 
-# Make gradlew executable
-chmod +x gradlew 2>/dev/null || true
+# Check if Gradle wrapper JAR exists
+if [ ! -f "$PROJECT_ROOT/gradle/wrapper/gradle-wrapper.jar" ]; then
+    echo "WARNING: Gradle wrapper JAR not found"
+    echo ""
+    echo "The Gradle wrapper needs to be initialized first."
+    echo ""
+    echo "Option 1: Initialize wrapper (requires Gradle installed)"
+    echo "  ./init-gradle.sh"
+    echo ""
+    echo "Option 2: Use system Gradle directly"
+    echo "  gradle clean build"
+    echo ""
+    echo "Option 3: Install Gradle"
+    echo "  See: https://gradle.org/install/"
+    echo ""
+    
+    # Try to use system gradle if available
+    if command -v gradle &> /dev/null; then
+        echo "Found system Gradle, using it instead..."
+        echo "Running: gradle clean build"
+        gradle clean build
+        BUILD_RESULT=$?
+    else
+        echo "ERROR: Neither Gradle wrapper nor system Gradle found"
+        echo "Please run: ./init-gradle.sh"
+        exit 1
+    fi
+else
+    # Make gradlew executable
+    chmod +x gradlew 2>/dev/null || true
+    
+    # Clean and build
+    echo "Running: ./gradlew clean build"
+    ./gradlew clean build
+    BUILD_RESULT=$?
+fi
 
-# Clean and build
-echo "Running: ./gradlew clean build"
-./gradlew clean build
-
-if [ $? -eq 0 ]; then
+if [ $BUILD_RESULT -eq 0 ]; then
     echo ""
     echo "=========================================="
     echo "Build Successful!"
