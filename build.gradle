@@ -49,9 +49,9 @@ dependencies {
     }
     
     // IBM DBB for build operations
-    // Priority: 1) Local lib/dbb, 2) DBB_HOME env var, 3) Default z/OS path
+    // Use local lib/dbb directory which contains DBB JAR files
     if (new File('lib/dbb').exists()) {
-        compileOnly fileTree(dir: 'lib/dbb', include: ['**/*.jar'])
+        compileOnly fileTree(dir: 'lib/dbb', include: ['*.jar'])
     } else if (System.getenv('DBB_HOME') && new File(System.getenv('DBB_HOME')).exists()) {
         compileOnly fileTree(dir: System.getenv('DBB_HOME'), include: ['lib/**/*.jar'])
     } else if (new File('/var/dbb').exists()) {
@@ -66,34 +66,14 @@ application {
     mainClass = 'com.ibm.dbb.migration.ExtractApplications'
 }
 
-// Task to create a fat JAR with all dependencies
-task fatJar(type: Jar) {
-    archiveClassifier = 'jar-with-dependencies'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    
-    manifest {
-        attributes(
-            'Main-Class': 'com.ibm.dbb.migration.ExtractApplications',
-            'Implementation-Title': 'DBB Git Migration Modeler - Extract Applications',
-            'Implementation-Version': version
-        )
-    }
-    
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    
-    with jar
-}
-
 // Task to copy runtime dependencies
 task copyDependencies(type: Copy) {
     from configurations.runtimeClasspath
     into "${buildDir}/libs/lib"
 }
 
-// Make build depend on fatJar and copyDependencies
-build.dependsOn fatJar, copyDependencies
+// Make build depend on copyDependencies
+build.dependsOn copyDependencies
 
 // Configure JAR task
 jar {
@@ -111,12 +91,20 @@ task info {
         println "Project: ${project.name}"
         println "Version: ${project.version}"
         println "Java Version: ${sourceCompatibility}"
-        println "Main Class: ${application.mainClass.get()}"
+        println ""
+        println "Available Main Classes:"
+        println "  - com.ibm.dbb.migration.ExtractApplications"
+        println "  - com.ibm.dbb.migration.MigrateDatasets"
+        println "  - com.ibm.dbb.migration.ScanApplication"
         println ""
         println "Build outputs:"
         println "  - Main JAR: build/libs/${project.name}-${project.version}.jar"
-        println "  - Fat JAR:  build/libs/${project.name}-${project.version}-jar-with-dependencies.jar"
         println "  - Dependencies: build/libs/lib/"
+        println ""
+        println "Usage:"
+        println "  java -cp build/libs/${project.name}-${project.version}.jar:build/libs/lib/* com.ibm.dbb.migration.ExtractApplications [options]"
+        println "  java -cp build/libs/${project.name}-${project.version}.jar:build/libs/lib/* com.ibm.dbb.migration.MigrateDatasets [options]"
+        println "  java -cp build/libs/${project.name}-${project.version}.jar:build/libs/lib/* com.ibm.dbb.migration.ScanApplication [options]"
     }
 }
 
