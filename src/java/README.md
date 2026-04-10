@@ -34,7 +34,7 @@ src/java/
 ## Prerequisites
 
 1. **Java 8 or higher**
-2. **Maven 3.6+** (for building)
+2. **Gradle** (wrapper included, no installation required)
 3. **z/OS Environment** with:
    - IBM JZOS libraries
    - IBM DBB installation
@@ -47,26 +47,53 @@ src/java/
 
 ## Building the Application
 
-### Using Maven
+### Using Gradle (Recommended)
+
+The project includes Gradle Wrapper, so you don't need to install Gradle separately.
 
 ```bash
-# Build the project
-mvn clean package
+# Build the project (Unix/Linux/macOS)
+./gradlew clean build
+
+# Build the project (Windows)
+gradlew.bat clean build
+
+# Or use the build script
+./src/java/build.sh
 
 # This creates:
-# - target/dbb-git-migration-modeler-1.0.0.jar (main JAR)
-# - target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar (fat JAR)
-# - target/lib/ (runtime dependencies)
+# - build/libs/dbb-git-migration-modeler-1.0.0.jar (main JAR)
+# - build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar (fat JAR)
+# - build/libs/lib/ (runtime dependencies)
 ```
 
 ### Build Outputs
 
-- **Main JAR**: `target/dbb-git-migration-modeler-1.0.0.jar`
+- **Main JAR**: `build/libs/dbb-git-migration-modeler-1.0.0.jar`
   - Requires dependencies in classpath
   
-- **Fat JAR**: `target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar`
+- **Fat JAR**: `build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar`
   - Includes all runtime dependencies (except provided scope)
   - Recommended for deployment
+
+### Gradle Tasks
+
+```bash
+# Clean build artifacts
+./gradlew clean
+
+# Compile Java sources
+./gradlew compileJava
+
+# Build JAR files
+./gradlew build
+
+# Display project information
+./gradlew info
+
+# List all available tasks
+./gradlew tasks
+```
 
 ## Running the Application
 
@@ -89,13 +116,13 @@ java -cp <classpath> com.ibm.dbb.migration.ExtractApplications [options]
 
 ```bash
 # Extract all applications
-java -cp "target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*" \
+java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*" \
   com.ibm.dbb.migration.ExtractApplications \
   -c /path/to/config.properties \
   -l /path/to/extract.log
 
 # Extract specific applications
-java -cp "target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*" \
+java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*" \
   com.ibm.dbb.migration.ExtractApplications \
   -c /path/to/config.properties \
   -a "APP1,APP2,APP3" \
@@ -114,7 +141,7 @@ export JAVA_HOME=/usr/lpp/java/J8.0_64
 export DBB_HOME=/var/dbb
 
 # Set classpath
-export CLASSPATH="target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*"
+export CLASSPATH="build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*"
 
 # Run the application
 java com.ibm.dbb.migration.ExtractApplications \
@@ -197,7 +224,9 @@ To migrate from the Groovy script to the Java version:
 
 1. **Build the Java application**:
    ```bash
-   mvn clean package
+   ./gradlew clean build
+   # or
+   ./src/java/build.sh
    ```
 
 2. **Update your shell scripts** to use Java instead of Groovy:
@@ -206,7 +235,11 @@ To migrate from the Groovy script to the Java version:
    $DBB_HOME/bin/groovyz src/groovy/extractApplications.groovy -c config.properties
    
    # New (Java)
-   java -cp "app.jar:$DBB_HOME/lib/*" com.ibm.dbb.migration.ExtractApplications -c config.properties
+   java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*" \
+     com.ibm.dbb.migration.ExtractApplications -c config.properties
+   
+   # Or use the wrapper script
+   ./src/java/run-extract-applications.sh -c config.properties
    ```
 
 3. **Test with a small dataset** to verify functionality

@@ -62,10 +62,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Check if JAR file exists
-JAR_FILE="$PROJECT_ROOT/target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar"
+JAR_FILE="$PROJECT_ROOT/build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar"
 if [ ! -f "$JAR_FILE" ]; then
     echo "ERROR: JAR file not found: $JAR_FILE"
     echo "Please build the project first using: ./src/java/build.sh"
+    echo "Or run: ./gradlew build"
     exit 1
 fi
 

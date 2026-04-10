@@ -42,10 +42,18 @@ April 9, 2026
   - Baseline and dependency management
 
 ### Build and Deployment
-- **`pom.xml`** (139 lines)
-  - Maven build configuration
+- **`build.gradle`** (105 lines)
+  - Gradle build configuration
   - Dependency management
   - JAR packaging with main class manifest
+  - Fat JAR generation task
+
+- **`gradlew`** (197 lines) & **`gradlew.bat`** (82 lines)
+  - Gradle wrapper scripts for Unix/Linux and Windows
+  - No Gradle installation required
+
+- **`gradle/wrapper/gradle-wrapper.properties`** (7 lines)
+  - Gradle wrapper configuration
 
 - **`src/java/build.sh`** (73 lines)
   - Build automation script
@@ -142,12 +150,18 @@ April 9, 2026
 ## Build Instructions
 
 ```bash
-# Build the project
+# Build the project using the build script
 cd /path/to/dbb-git-migration-modeler
 ./src/java/build.sh
 
-# Or use Maven directly
-mvn clean package
+# Or use Gradle directly (Unix/Linux/macOS)
+./gradlew clean build
+
+# Or use Gradle directly (Windows)
+gradlew.bat clean build
+
+# Display project information
+./gradlew info
 ```
 
 ## Usage Examples
@@ -206,9 +220,9 @@ $DBB_HOME/bin/groovyz src/groovy/extractApplications.groovy \
   -l extract.log
 ```
 
-**After (Java)**:
+**After (Java with Gradle)**:
 ```bash
-java -cp "target/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*" \
+java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*" \
   com.ibm.dbb.migration.ExtractApplications \
   -c config.properties \
   -l extract.log
@@ -243,8 +257,7 @@ Potential improvements for future versions:
 - [ ] Support for additional file encodings
 - [ ] REST API wrapper for remote execution
 - [ ] Docker containerization for testing
-- [ ] Gradle build alternative
-- [ ] Windows batch file equivalents for shell scripts
+- [ ] Windows batch file equivalents for shell scripts (gradlew.bat already included)
 
 ## Compatibility Matrix
 
