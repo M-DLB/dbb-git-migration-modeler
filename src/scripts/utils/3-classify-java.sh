@@ -128,9 +128,9 @@ if [ $rc -eq 0 ]; then
 			echo "*******************************************************************"
 			echo "Scan application directory '$DBB_MODELER_APPLICATION_DIR/$applicationDir'"
 			echo "*******************************************************************"
-			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.ScanApplication -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\""
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.ScanApplication -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\" -l \"$DBB_MODELER_LOGS/3-$applicationDir-scan.log\""
 			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/3-$applicationDir-scan.log
-			eval $CMD >> $DBB_MODELER_LOGS/3-$applicationDir-scan.log 2>&1
+			eval $CMD
 			rc=$?
 			
 			if [ $rc -ne 0 ]; then
@@ -150,7 +150,7 @@ if [ $rc -eq 0 ]; then
 				echo "*******************************************************************"
 				echo "Assess Include files & Programs usage for '$applicationDir'"
 				echo "*******************************************************************"
-				CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.AssessUsage -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\"" -l $DBB_MODELER_LOGS/3-$applicationDir-assessUsage.log
+				CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.AssessUsage -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\" -l \"$DBB_MODELER_LOGS/3-$applicationDir-assessUsage.log\""
 				echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/3-$applicationDir-assessUsage.log
 				eval $CMD
 				rc=$?
