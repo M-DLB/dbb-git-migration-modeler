@@ -2,10 +2,10 @@
 .gradle/
 build/
 
-# Gradle wrapper (not used - using system Gradle)
-gradle/
-gradlew
-gradlew.bat
+# Gradle wrapper - now included for portability
+!gradle/
+!gradlew
+!gradlew.bat
 
 # Maven (legacy)
 target/
@@ -44,6 +44,11 @@ Thumbs.db
 *.class
 *.jar
 !gradle/wrapper/*.jar
+!*-stubs.jar
 *.war
 *.ear
 hs_err_pid*
+
+# Stub compilation artifacts
+stubs/
+stubs-compiled/

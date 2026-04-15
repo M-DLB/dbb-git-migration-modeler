@@ -13,7 +13,10 @@ import com.ibm.dbb.utils.FileUtils;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -23,15 +26,29 @@ import java.util.Date;
  */
 public class Logger {
     private BufferedWriter logfileWriter;
+    private String logFilePath;
+    private String logEncoding;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
     /**
-     * Create a log file writer
+     * Create a log file writer with UTF-8 encoding
      * @param loggerFilePath Path to the log file
      */
     public void create(String loggerFilePath) throws IOException {
-        logfileWriter = new BufferedWriter(new FileWriter(loggerFilePath, true));
-        FileUtils.setFileTag(loggerFilePath, "UTF-8");
+        create(loggerFilePath, "UTF-8");
+    }
+    
+    /**
+     * Create a log file writer with specified encoding
+     * @param loggerFilePath Path to the log file
+     * @param encoding Character encoding for the log file
+     */
+    public void create(String loggerFilePath, String encoding) throws IOException {
+        this.logFilePath = loggerFilePath;
+        this.logEncoding = encoding;
+        logfileWriter = new BufferedWriter(new OutputStreamWriter(
+            new FileOutputStream(loggerFilePath, true), Charset.forName(encoding)));
+        FileUtils.setFileTag(loggerFilePath, encoding);
     }
 
     /**
@@ -41,6 +58,13 @@ public class Logger {
         if (logfileWriter != null) {
             try {
                 logfileWriter.close();
+                // Ensure file tag is set after closing
+                if (logFilePath != null && logEncoding != null) {
+                    if (!FileUtils.setFileTag(logFilePath, logEncoding)) {
+                        System.out.println("*! Error while tagging file '" + logFilePath +
+                            "' with '" + logEncoding + "' encoding, must be done manually.");
+                    }
+                }
             } catch (IOException e) {
                 System.err.println("Error closing log file: " + e.getMessage());
             }

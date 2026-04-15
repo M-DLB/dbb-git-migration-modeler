@@ -104,6 +104,15 @@ public class RepositoryPathsMapping {
             this.lowercase = lowercase;
         }
 
+        // Alias for YAML compatibility (toLowerCase in YAML maps to lowercase in Java)
+        public boolean isToLowerCase() {
+            return lowercase;
+        }
+
+        public void setToLowerCase(boolean toLowerCase) {
+            this.lowercase = toLowerCase;
+        }
+
         public MvsMapping getMvsMapping() {
             return mvsMapping;
         }

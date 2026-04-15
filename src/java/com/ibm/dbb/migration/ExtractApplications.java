@@ -176,19 +176,19 @@ public class ExtractApplications {
 
     private void loadConfiguration(String configFilePath) throws Exception {
         props.setProperty("configurationFilePath", configFilePath);
-        File configFile = new File(configFilePath);
         
-        if (!configFile.exists()) {
-            throw new FileNotFoundException("Configuration file not found: " + configFilePath);
-        }
-        
-        Properties configuration = new Properties();
-        try (FileReader reader = new FileReader(configFile)) {
-            configuration.load(reader);
-        }
-        
-        for (String key : configuration.stringPropertyNames()) {
-            props.setProperty(key, configuration.getProperty(key));
+        // Validate and load configuration using ValidateConfiguration
+        logger.logMessage("** Validating configuration file...");
+        try {
+            Properties configuration = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
+            
+            // Copy all validated properties
+            for (String key : configuration.stringPropertyNames()) {
+                props.setProperty(key, configuration.getProperty(key));
+            }
+        } catch (Exception e) {
+            logger.logMessage("*! [ERROR] Configuration validation failed: " + e.getMessage());
+            throw e;
         }
     }
 

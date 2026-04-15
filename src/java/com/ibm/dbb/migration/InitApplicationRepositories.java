@@ -1,0 +1,804 @@
+/*
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2018, 2025. All Rights Reserved.
+ *
+ * Note to U.S. Government Users Restricted Rights:
+ * Use, duplication or disclosure restricted by GSA ADP Schedule
+ * Contract with IBM Corp.
+ */
+
+package com.ibm.dbb.migration;
+
+import org.apache.commons.cli.*;
+
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Initializes Git repositories for migrated applications.
+ * Equivalent to the 5-initApplicationRepositories.sh shell script.
+ */
+public class InitApplicationRepositories {
+    
+    private String configFilePath;
+    private String applicationFilter;
+    private Properties configProperties;
+    private int exitCode = 0;
+    
+    public static void main(String[] args) {
+        InitApplicationRepositories initializer = new InitApplicationRepositories();
+        try {
+            initializer.run(args);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Repository initialization failed: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(8);
+        }
+    }
+    
+    public void run(String[] args) throws Exception {
+        // Parse command line options
+        Options options = createOptions();
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.err.println("[ERROR] Error parsing command line: " + e.getMessage());
+            formatter.printHelp("InitApplicationRepositories [options]", 
+                "Initializes Git repositories for migrated applications", 
+                options, "", true);
+            System.exit(2);
+            return;
+        }
+        
+        // Process options
+        if (cmd.hasOption("c")) {
+            configFilePath = cmd.getOptionValue("c");
+        } else {
+            System.err.println("[ERROR] Configuration file option (-c) is required.");
+            formatter.printHelp("InitApplicationRepositories [options]", options);
+            System.exit(2);
+            return;
+        }
+        
+        if (cmd.hasOption("a")) {
+            applicationFilter = cmd.getOptionValue("a");
+        }
+        
+        // Validate options and load configuration
+        validateOptions();
+        
+        if (exitCode == 0) {
+            initializeRepositories();
+        }
+        
+        if (exitCode != 0) {
+            System.err.println("[ERROR] Repository initialization failed. rc=" + exitCode);
+            System.exit(exitCode);
+        }
+    }
+    
+    private Options createOptions() {
+        Options options = new Options();
+        
+        options.addOption(Option.builder("c")
+            .longOpt("config")
+            .hasArg()
+            .argName("configFile")
+            .desc("DBB Git Migration Modeler configuration file (required)")
+            .required()
+            .build());
+            
+        options.addOption(Option.builder("a")
+            .longOpt("applications")
+            .hasArg()
+            .argName("appList")
+            .desc("Comma-separated list of applications to initialize (optional, default: all)")
+            .build());
+            
+        return options;
+    }
+    
+    private void validateOptions() {
+        if (configFilePath == null || configFilePath.isEmpty()) {
+            exitCode = 8;
+            System.err.println("[ERROR] Configuration file path is required. rc=" + exitCode);
+            return;
+        }
+        
+        File configFile = new File(configFilePath);
+        if (!configFile.exists()) {
+            exitCode = 8;
+            System.err.println("[ERROR] Configuration file not found: " + configFilePath + ". rc=" + exitCode);
+            return;
+        }
+        
+        // Load and validate configuration
+        try {
+            configProperties = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
+        } catch (Exception e) {
+            exitCode = 8;
+            System.err.println("[ERROR] Configuration validation failed: " + e.getMessage() + ". rc=" + exitCode);
+        }
+    }
+    
+    private void initializeRepositories() {
+        String applicationDir = configProperties.getProperty("DBB_MODELER_APPLICATION_DIR");
+        String logsDir = configProperties.getProperty("DBB_MODELER_LOGS");
+        String defaultBranch = configProperties.getProperty("APPLICATION_DEFAULT_BRANCH", "main");
+        
+        if (applicationDir == null || applicationDir.isEmpty()) {
+            exitCode = 8;
+            System.err.println("[ERROR] DBB_MODELER_APPLICATION_DIR not configured. rc=" + exitCode);
+            return;
+        }
+        
+        File appDirFile = new File(applicationDir);
+        if (!appDirFile.exists() || !appDirFile.isDirectory()) {
+            exitCode = 8;
+            System.err.println("[ERROR] Application directory does not exist: " + applicationDir + ". rc=" + exitCode);
+            return;
+        }
+        
+        // Get list of applications to process
+        Set<String> applicationsToProcess = getApplicationsToProcess(appDirFile);
+        
+        if (applicationsToProcess.isEmpty()) {
+            System.out.println("[INFO] No applications found to initialize.");
+            return;
+        }
+        
+        // Process each application
+        for (String appName : applicationsToProcess) {
+            exitCode = 0; // Reset for each application
+            
+            System.out.println("*******************************************************************");
+            System.out.println("Initialize application's directory for application '" + appName + "'");
+            System.out.println("*******************************************************************");
+            
+            File appRepoDir = new File(applicationDir, appName);
+            String logFile = logsDir + File.separator + "5-" + appName + "-initApplicationRepository.log";
+            
+            try {
+                // Check if already a Git repository
+                if (isGitRepository(appRepoDir)) {
+                    System.out.println("*! [WARNING] '" + appRepoDir.getAbsolutePath() + 
+                        "' is already a Git repository. Skip initialization for " + appName + ".");
+                    continue;
+                }
+                
+                // Reset DBB Metadatastore buildGroup
+                String buildGroupName = appName + "-" + defaultBranch;
+                resetBuildGroup(buildGroupName, appName, logFile);
+                
+                if (exitCode != 0) continue;
+                
+                // Initialize Git repository
+                initializeGitRepository(appRepoDir, defaultBranch, logFile);
+                
+                if (exitCode != 0) continue;
+                
+                // Copy .gitattributes file
+                copyGitAttributes(appRepoDir, logFile);
+                
+                if (exitCode != 0) continue;
+                
+                // Copy and customize ZAPP file
+                customizeZappFile(appRepoDir, appName, logFile);
+                
+                if (exitCode != 0) continue;
+                
+                // Create baselineReference.config file
+                createBaselineReferenceConfig(appRepoDir, appName, defaultBranch);
+                
+                if (exitCode != 0) continue;
+                
+                // Create IDZ project file
+                createIdzProjectFile(appRepoDir, appName);
+                
+                if (exitCode != 0) continue;
+                
+                // Prepare pipeline configuration
+                preparePipelineConfiguration(appRepoDir, appName, logFile);
+                
+                if (exitCode != 0) continue;
+                
+                // Git operations: status, add, commit
+                performGitOperations(appRepoDir, logFile);
+                
+                if (exitCode != 0) continue;
+                
+                // Create tag and release branch
+                createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
+                
+                if (exitCode == 0) {
+                    System.out.println("** Initializing Git repository for application '" + appName + 
+                        "' completed successfully. rc=" + exitCode);
+                    
+                    // Run preview build
+                    runPreviewBuild(appRepoDir, appName, logsDir, logFile);
+                    
+                    // Update metadata store owners (Db2 only)
+                    updateMetadataStoreOwners(buildGroupName, appName, logFile);
+                    
+                    // Publish artifacts if enabled
+                    publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
+                } else {
+                    System.err.println("*! [ERROR] Initializing Git repository for application '" + appName + 
+                        "' failed. rc=" + exitCode);
+                }
+                
+            } catch (Exception e) {
+                exitCode = 8;
+                System.err.println("*! [ERROR] Failed to initialize repository for '" + appName + "': " + 
+                    e.getMessage() + ". rc=" + exitCode);
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private Set<String> getApplicationsToProcess(File appDirFile) {
+        Set<String> applications = new LinkedHashSet<>();
+        
+        // Get all directories except dbb-zappbuild
+        File[] dirs = appDirFile.listFiles(File::isDirectory);
+        if (dirs != null) {
+            for (File dir : dirs) {
+                String dirName = dir.getName();
+                if (!dirName.equals("dbb-zappbuild")) {
+                    applications.add(dirName);
+                }
+            }
+        }
+        
+        // Filter by application list if provided
+        if (applicationFilter != null && !applicationFilter.isEmpty()) {
+            Set<String> filterSet = Arrays.stream(applicationFilter.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+            applications.retainAll(filterSet);
+        }
+        
+        return applications;
+    }
+    
+    private boolean isGitRepository(File directory) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("git", "rev-parse", "--is-inside-work-tree");
+            pb.directory(directory);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = reader.readLine();
+            process.waitFor();
+            
+            return line != null && line.trim().equals("true");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    private void resetBuildGroup(String buildGroupName, String appName, String logFile) throws IOException {
+        System.out.println("** Reset DBB Metadatastore buildGroup '" + buildGroupName + 
+            "' for repository '" + appName + "'");
+        
+        String dbbHome = System.getenv("DBB_HOME");
+        String modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
+        
+        List<String> command = Arrays.asList(
+            dbbHome + "/bin/groovyz",
+            modelerHome + "/src/groovy/utils/metadataStoreUtility.groovy",
+            "-c", configFilePath,
+            "--deleteBuildGroup",
+            "--buildGroup", buildGroupName,
+            "-l", logFile
+        );
+        
+        executeCommand(command, null, logFile);
+    }
+    
+    private void initializeGitRepository(File directory, String defaultBranch, String logFile) throws IOException {
+        System.out.println("** Initialize Git repository for application '" + directory.getName() + 
+            "' with initial branch '" + defaultBranch + "'");
+        
+        List<String> command = Arrays.asList("git", "init", "--initial-branch=" + defaultBranch);
+        executeCommand(command, directory, logFile);
+    }
+    
+    private void copyGitAttributes(File appRepoDir, String logFile) throws IOException {
+        System.out.println("** Update Git configuration file '.gitattributes'");
+        
+        String defaultConfigDir = configProperties.getProperty("DBB_MODELER_DEFAULT_APP_REPO_CONFIG");
+        File sourceFile = new File(defaultConfigDir, ".gitattributes");
+        File targetFile = new File(appRepoDir, ".gitattributes");
+        
+        if (targetFile.exists()) {
+            targetFile.delete();
+        }
+        
+        Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        appendToLog(logFile, "[CMD] cp " + sourceFile + " " + targetFile);
+    }
+    
+    private void customizeZappFile(File appRepoDir, String appName, String logFile) throws IOException {
+        System.out.println("** Update ZAPP file 'zapp.yaml'");
+        
+        String defaultConfigDir = configProperties.getProperty("DBB_MODELER_DEFAULT_APP_REPO_CONFIG");
+        File sourceFile = new File(defaultConfigDir, "zapp_template.yaml");
+        File targetFile = new File(appRepoDir, "zapp.yaml");
+        
+        if (targetFile.exists()) {
+            targetFile.delete();
+        }
+        
+        Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        
+        // Customize ZAPP file using groovy utility
+        String dbbHome = System.getenv("DBB_HOME");
+        String modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
+        
+        List<String> command = Arrays.asList(
+            dbbHome + "/bin/groovyz",
+            modelerHome + "/src/groovy/utils/zappUtils.groovy",
+            "-c", configFilePath,
+            "-a", appName,
+            "-l", logFile
+        );
+        
+        executeCommand(command, null, logFile);
+    }
+    
+    private void createBaselineReferenceConfig(File appRepoDir, String appName, String defaultBranch) throws IOException {
+        System.out.println("** Create file 'baselineReference.config'");
+        
+        File confDir = new File(appRepoDir, "application-conf");
+        if (!confDir.exists()) {
+            confDir.mkdirs();
+        }
+        
+        File baselineFile = new File(confDir, "baselineReference.config");
+        
+        // Get version from applicationDescriptor.yml
+        String version = extractVersionFromDescriptor(appRepoDir, appName, defaultBranch);
+        if (version == null || version.isEmpty()) {
+            version = "rel-1.0.0";
+        }
+        
+        // Write baseline reference config
+        try (PrintWriter writer = new PrintWriter(new FileWriter(baselineFile))) {
+            writer.println("# main branch - baseline reference for the next planned release");
+            writer.println("main=refs/tags/" + version);
+            writer.println();
+            writer.println("# release maintenance branch - for maintenance fixes for the current release in production " + version);
+            writer.println("release/" + version + "=refs/tags/" + version);
+        }
+        
+        // Set encoding tag (z/OS specific)
+        try {
+            executeCommand(Arrays.asList("chtag", "-c", "ibm-1047", "-t", baselineFile.getAbsolutePath()), 
+                null, null);
+        } catch (Exception e) {
+            // Ignore chtag errors on non-z/OS systems
+        }
+    }
+    
+    private void createIdzProjectFile(File appRepoDir, String appName) throws IOException {
+        System.out.println("** Create file IDZ project configuration file '.project'");
+        
+        File projectFile = new File(appRepoDir, ".project");
+        
+        try (PrintWriter writer = new PrintWriter(new FileWriter(projectFile))) {
+            writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            writer.println("<projectDescription>");
+            writer.println("    <name>" + appName + "</name>");
+            writer.println("    <comment></comment>");
+            writer.println("    <projects>");
+            writer.println("    </projects>");
+            writer.println("    <buildSpec>");
+            writer.println("    </buildSpec>");
+            writer.println("    <natures>");
+            writer.println("        <nature>com.ibm.ftt.ui.views.project.navigator.local</nature>");
+            writer.println("        <nature>com.ibm.ftt.dbbz.integration.dbbzprojectnature</nature>");
+            writer.println("    </natures>");
+            writer.println("</projectDescription>");
+        }
+    }
+    
+    private void preparePipelineConfiguration(File appRepoDir, String appName, String logFile) throws IOException {
+        System.out.println("** Prepare pipeline configuration for '" + 
+            configProperties.getProperty("PIPELINE_CI", "None") + "'");
+        
+        String pipelineCI = configProperties.getProperty("PIPELINE_CI", "None");
+        String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
+        
+        switch (pipelineCI) {
+            case "AzureDevOpsPipeline":
+                copyAzureDevOpsPipeline(appRepoDir, dbbCommunityRepo, logFile);
+                break;
+            case "GitlabCIPipeline-for-zos-native-runner":
+            case "GitlabCIPipeline-for-distributed-runner":
+                copyGitLabPipeline(appRepoDir, dbbCommunityRepo, pipelineCI, logFile);
+                break;
+            case "JenkinsPipeline":
+                copyJenkinsPipeline(appRepoDir, dbbCommunityRepo, logFile);
+                break;
+            case "GitHubActionsPipeline":
+                copyGitHubActionsPipeline(appRepoDir, dbbCommunityRepo, logFile);
+                break;
+            case "None":
+                System.out.println("[INFO] Adding the pipeline orchestration technology template is skipped per configuration.");
+                break;
+            default:
+                System.out.println("[WARNING] The pipeline orchestration technology provided (" + pipelineCI + 
+                    ") does not match any of the supported options. Skipped.");
+                break;
+        }
+    }
+    
+    private void copyAzureDevOpsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
+        File ciFile = new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/azure-pipelines.yml");
+        if (!ciFile.exists()) {
+            exitCode = 8;
+            System.err.println("[ERROR] The pipeline template file '" + ciFile + "' was not found. rc=" + exitCode);
+            return;
+        }
+        
+        Files.copy(ciFile.toPath(), new File(appRepoDir, "azure-pipelines.yml").toPath(), 
+            StandardCopyOption.REPLACE_EXISTING);
+        
+        // Copy deployment templates
+        File deploymentDir = new File(appRepoDir, "deployment");
+        deploymentDir.mkdirs();
+        copyDirectory(new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/templates/deployment"), 
+            deploymentDir);
+        
+        // Copy tagging templates
+        File taggingDir = new File(appRepoDir, "tagging");
+        taggingDir.mkdirs();
+        copyDirectory(new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/templates/tagging"), 
+            taggingDir);
+    }
+    
+    private void copyGitLabPipeline(File appRepoDir, String dbbCommunityRepo, String pipelineCI, String logFile) throws IOException {
+        File ciFile = new File(dbbCommunityRepo, "Templates/" + pipelineCI + "/.gitlab-ci.yml");
+        if (!ciFile.exists()) {
+            exitCode = 8;
+            System.err.println("[ERROR] The pipeline template file '" + ciFile + "' was not found. rc=" + exitCode);
+            return;
+        }
+        
+        Files.copy(ciFile.toPath(), new File(appRepoDir, ".gitlab-ci.yml").toPath(), 
+            StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    private void copyJenkinsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
+        File ciFile = new File(dbbCommunityRepo, "Templates/JenkinsPipeline/Jenkinsfile");
+        if (!ciFile.exists()) {
+            exitCode = 8;
+            System.err.println("[ERROR] The pipeline template file '" + ciFile + "' was not found. rc=" + exitCode);
+            return;
+        }
+        
+        Files.copy(ciFile.toPath(), new File(appRepoDir, "Jenkinsfile").toPath(), 
+            StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    private void copyGitHubActionsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
+        File ciDir = new File(dbbCommunityRepo, "Templates/GitHubActionsPipeline/.github");
+        if (!ciDir.exists()) {
+            exitCode = 8;
+            System.err.println("[ERROR] The pipeline template directory '" + ciDir + "' was not found. rc=" + exitCode);
+            return;
+        }
+        
+        File targetDir = new File(appRepoDir, ".github");
+        copyDirectory(ciDir, targetDir);
+    }
+    
+    private void copyDirectory(File source, File target) throws IOException {
+        if (!source.exists()) {
+            return;
+        }
+        
+        if (!target.exists()) {
+            target.mkdirs();
+        }
+        
+        File[] files = source.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                File targetFile = new File(target, file.getName());
+                if (file.isDirectory()) {
+                    copyDirectory(file, targetFile);
+                } else {
+                    Files.copy(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+    }
+    
+    private void performGitOperations(File directory, String logFile) throws IOException {
+        // Git status
+        executeCommand(Arrays.asList("git", "status"), directory, logFile);
+        
+        if (exitCode != 0) return;
+        
+        // Git add all
+        System.out.println("** Add files to Git repository");
+        executeCommand(Arrays.asList("git", "add", "--all"), directory, logFile);
+        
+        if (exitCode != 0) return;
+        
+        // Git commit
+        System.out.println("** Commit files to Git repository");
+        executeCommand(Arrays.asList("git", "commit", "-m", "Initial Commit"), directory, logFile);
+    }
+    
+    private void createTagAndReleaseBranch(File directory, String appName, String defaultBranch, String logFile) throws IOException {
+        String version = extractVersionFromDescriptor(directory, appName, defaultBranch);
+        if (version == null || version.isEmpty()) {
+            version = "rel-1.0.0";
+        }
+        
+        System.out.println("** Create git tag '" + version + "'");
+        executeCommand(Arrays.asList("git", "tag", version), directory, logFile);
+        
+        if (exitCode != 0) return;
+        
+        System.out.println("** Create release maintenance branch 'release/" + version + "'");
+        executeCommand(Arrays.asList("git", "branch", "release/" + version, "refs/tags/" + version), 
+            directory, logFile);
+    }
+    
+    private void runPreviewBuild(File appRepoDir, String appName, String logsDir, String logFile) throws IOException {
+        if (exitCode != 0) return;
+        
+        System.out.println("** Preview Build of application '" + appName + "' started");
+        
+        // Create application log directory
+        File appLogDir = new File(logsDir, appName);
+        appLogDir.mkdirs();
+        
+        String buildFramework = configProperties.getProperty("BUILD_FRAMEWORK");
+        String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
+        String dbbHome = System.getenv("DBB_HOME");
+        
+        List<String> command = new ArrayList<>();
+        
+        if ("zBuilder".equals(buildFramework)) {
+            String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
+            Map<String, String> env = new HashMap<>(System.getenv());
+            env.put("DBB_BUILD", zBuilderPath);
+            
+            command.add(dbbHome + "/bin/dbb");
+            command.add("build");
+            command.add("full");
+            command.add("--hlq");
+            command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
+            command.add("--preview");
+            
+            if ("db2".equals(metadataStoreType)) {
+                command.add("--dbid");
+                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
+                command.add("--dbpw");
+                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
+            }
+            
+            executeCommandWithEnv(command, appRepoDir, 
+                new File(appLogDir, "build-preview-" + appName + ".log").getAbsolutePath(), env);
+            
+        } else if ("zAppBuild".equals(buildFramework)) {
+            String zAppBuildPath = configProperties.getProperty("DBB_ZAPPBUILD");
+            String applicationDir = configProperties.getProperty("DBB_MODELER_APPLICATION_DIR");
+            
+            command.add(dbbHome + "/bin/groovyz");
+            command.add(zAppBuildPath + "/build.groovy");
+            command.add("--workspace");
+            command.add(applicationDir);
+            command.add("--application");
+            command.add(appName);
+            command.add("--outDir");
+            command.add(appLogDir.getAbsolutePath());
+            command.add("--fullBuild");
+            command.add("--hlq");
+            command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
+            command.add("--preview");
+            command.add("--logEncoding");
+            command.add("UTF-8");
+            command.add("--applicationCurrentBranch");
+            command.add(configProperties.getProperty("APPLICATION_DEFAULT_BRANCH", "main"));
+            
+            if ("file".equals(metadataStoreType)) {
+                command.add("--propOverwrites");
+                command.add("createBuildOutputSubfolder=false,metadataStoreType=" + metadataStoreType + 
+                    ",metadataStoreFileLocation=" + configProperties.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR"));
+            } else if ("db2".equals(metadataStoreType)) {
+                command.add("--propOverwrites");
+                command.add("createBuildOutputSubfolder=false,metadataStoreType=" + metadataStoreType + 
+                    ",metadataStoreDb2ConnectionConf=" + configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE"));
+                command.add("--id");
+                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
+                command.add("--pwFile");
+                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
+            }
+            
+            executeCommand(command, null, 
+                new File(appLogDir, "build-preview-" + appName + ".log").getAbsolutePath());
+        }
+        
+        if (exitCode == 0) {
+            System.out.println("** Preview Build of application '" + appName + "' completed successfully. rc=" + exitCode);
+        } else {
+            System.err.println("*! [ERROR] Preview Build of application '" + appName + "' failed. rc=" + exitCode);
+            System.err.println("** Build logs and reports available at '" + appLogDir.getAbsolutePath() + "'");
+        }
+    }
+    
+    private void updateMetadataStoreOwners(String buildGroupName, String appName, String logFile) throws IOException {
+        if (exitCode != 0) return;
+        
+        String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
+        if (!"db2".equals(metadataStoreType)) {
+            return;
+        }
+        
+        System.out.println("** Update owner of collections for DBB Metadatastore buildGroup '" + 
+            buildGroupName + "' for repository '" + appName + "'");
+        
+        String dbbHome = System.getenv("DBB_HOME");
+        String modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
+        String pipelineUser = configProperties.getProperty("PIPELINE_USER");
+        
+        List<String> command = Arrays.asList(
+            dbbHome + "/bin/groovyz",
+            modelerHome + "/src/groovy/utils/metadataStoreUtility.groovy",
+            "-c", configFilePath,
+            "--setBuildGroupOwner", pipelineUser,
+            "--buildGroup", buildGroupName
+        );
+        
+        executeCommand(command, null, logFile);
+    }
+    
+    private void publishArtifacts(File appRepoDir, String appName, String defaultBranch, String logsDir, String logFile) throws IOException {
+        if (exitCode != 0) return;
+        
+        String publishArtifacts = configProperties.getProperty("PUBLISH_ARTIFACTS", "false");
+        if (!"true".equals(publishArtifacts)) {
+            return;
+        }
+        
+        System.out.println("** Creating baseline package of application '" + appName + "' started");
+        
+        File appLogDir = new File(logsDir, appName);
+        appLogDir.mkdirs();
+        
+        String version = extractVersionFromDescriptor(appRepoDir, appName, defaultBranch);
+        if (version == null || version.isEmpty()) {
+            version = "rel-1.0.0";
+        }
+        
+        String dbbHome = System.getenv("DBB_HOME");
+        String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
+        String pipelineUser = configProperties.getProperty("PIPELINE_USER");
+        String pipelineUserGroup = configProperties.getProperty("PIPELINE_USER_GROUP");
+        
+        List<String> command = Arrays.asList(
+            dbbHome + "/bin/groovyz",
+            dbbCommunityRepo + "/Pipeline/PackageBuildOutputs/PackageBuildOutputs.groovy",
+            "--workDir", appLogDir.getAbsolutePath(),
+            "--addExtension",
+            "--branch", defaultBranch,
+            "--version", version,
+            "--tarFileName", appName + "-" + version + "-baseline.tar",
+            "--applicationFolderPath", appRepoDir.getAbsolutePath(),
+            "--owner", pipelineUser + ":" + pipelineUserGroup,
+            "--artifactRepositoryUrl", configProperties.getProperty("ARTIFACT_REPOSITORY_SERVER_URL"),
+            "--artifactRepositoryUser", configProperties.getProperty("ARTIFACT_REPOSITORY_USER"),
+            "--artifactRepositoryPassword", configProperties.getProperty("ARTIFACT_REPOSITORY_PASSWORD"),
+            "--artifactRepositoryDirectory", "release",
+            "--artifactRepositoryName", appName + "-" + configProperties.getProperty("ARTIFACT_REPOSITORY_SUFFIX")
+        );
+        
+        executeCommand(command, null, 
+            new File(appLogDir, "packaging-preview-" + appName + ".log").getAbsolutePath());
+        
+        if (exitCode == 0) {
+            System.out.println("** Creation of Baseline Package of application '" + appName + 
+                "' completed successfully. rc=" + exitCode);
+        } else {
+            System.err.println("*! [ERROR] Creation of Baseline Package of application '" + appName + 
+                "' failed. rc=" + exitCode);
+            System.err.println("** Packaging log available at '" + 
+                new File(appLogDir, "packaging-preview-" + appName + ".log").getAbsolutePath() + "'");
+        }
+    }
+    
+    private String extractVersionFromDescriptor(File appRepoDir, String appName, String defaultBranch) {
+        try {
+            File descriptorFile = new File(appRepoDir, "applicationDescriptor.yml");
+            if (!descriptorFile.exists()) {
+                return null;
+            }
+            
+            List<String> lines = Files.readAllLines(descriptorFile.toPath());
+            boolean foundBranch = false;
+            
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i);
+                if (line.contains("branch: \"" + defaultBranch + "\"")) {
+                    foundBranch = true;
+                } else if (foundBranch && line.contains("version:")) {
+                    String version = line.split(":")[1].trim();
+                    return version.replaceAll("[\" ]", "");
+                }
+            }
+        } catch (Exception e) {
+            // Ignore errors, return default
+        }
+        return null;
+    }
+    
+    private void executeCommand(List<String> command, File workingDir, String logFile) throws IOException {
+        executeCommandWithEnv(command, workingDir, logFile, null);
+    }
+    
+    private void executeCommandWithEnv(List<String> command, File workingDir, String logFile, 
+            Map<String, String> environment) throws IOException {
+        
+        if (logFile != null) {
+            appendToLog(logFile, "[CMD] " + String.join(" ", command));
+        }
+        
+        ProcessBuilder pb = new ProcessBuilder(command);
+        if (workingDir != null) {
+            pb.directory(workingDir);
+        }
+        if (environment != null) {
+            pb.environment().putAll(environment);
+        }
+        
+        pb.redirectErrorStream(true);
+        
+        try {
+            Process process = pb.start();
+            
+            // Capture output
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (logFile != null) {
+                    appendToLog(logFile, line);
+                }
+            }
+            
+            int rc = process.waitFor();
+            if (rc != 0) {
+                exitCode = rc;
+            }
+            
+        } catch (InterruptedException e) {
+            exitCode = 8;
+            Thread.currentThread().interrupt();
+            throw new IOException("Command execution interrupted", e);
+        }
+    }
+    
+    private void appendToLog(String logFile, String message) {
+        try (FileWriter fw = new FileWriter(logFile, true);
+             PrintWriter pw = new PrintWriter(fw)) {
+            pw.println(message);
+        } catch (IOException e) {
+            // Ignore log write errors
+        }
+    }
+}
+
+// Made with Bob
