@@ -102,10 +102,8 @@ fi
 if [ $rc -eq 0 ]; then
 	# Load required configuration properties
 	BUILD_FRAMEWORK=$(grep "^BUILD_FRAMEWORK=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
-	
-	echo "*******************************************************************"
-	echo "Generate properties using Java implementation for $BUILD_FRAMEWORK"
-	echo "*******************************************************************"
+	DBB_MODELER_APPLICATION_DIR=$(grep "^DBB_MODELER_APPLICATION_DIR=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
+	DBB_MODELER_LOGS=$(grep "^DBB_MODELER_LOGS=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
 	
 	# Determine which Java class to call based on BUILD_FRAMEWORK
 	if [ "$BUILD_FRAMEWORK" = "zBuilder" ]; then
@@ -119,15 +117,29 @@ if [ $rc -eq 0 ]; then
 	fi
 	
 	if [ $rc -eq 0 ]; then
-		# Build Java command
-		CMD="java -cp \"$CLASSPATH\" $JAVA_CLASS -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\""
-		if [ -n "${APPLICATION_FILTER}" ]; then
-			CMD="${CMD} -a ${APPLICATION_FILTER}"
-		fi
+		# Adding commas before and after the passed parm, to search for pattern including commas
+		APPLICATION_FILTER=",${APPLICATION_FILTER},"
 
-		echo "[INFO] ${CMD}"
-		eval $CMD
-		rc=$?
+		cd $DBB_MODELER_APPLICATION_DIR
+		for applicationDir in $(ls | grep -v dbb-zappbuild)
+		do
+			# If no parm specified or if the specified list of applications contains the current application
+			if [ "$APPLICATION_FILTER" == ",," ] || [[ ${APPLICATION_FILTER} == *",${applicationDir},"* ]]; then
+				echo "*******************************************************************"
+				echo "Generate properties for application '$applicationDir'"
+				echo "*******************************************************************"
+				
+				CMD="java -cp \"$CLASSPATH\" $JAVA_CLASS -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\""
+				echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/4-$applicationDir-generateProperties.log
+				eval $CMD >> $DBB_MODELER_LOGS/4-$applicationDir-generateProperties.log 2>&1
+				rc=$?
+				
+				if [ $rc -ne 0 ]; then
+					echo "[ERROR] Generate properties failed for application '$applicationDir'. rc=$rc"
+					break
+				fi
+			fi
+		done
 	fi
 fi
 

@@ -103,45 +103,64 @@ if [ $rc -eq 0 ]; then
 	# Load required configuration properties
 	DBB_MODELER_METADATASTORE_TYPE=$(grep "^DBB_MODELER_METADATASTORE_TYPE=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
 	DBB_MODELER_FILE_METADATA_STORE_DIR=$(grep "^DBB_MODELER_FILE_METADATA_STORE_DIR=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
+	DBB_MODELER_APPLICATION_DIR=$(grep "^DBB_MODELER_APPLICATION_DIR=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
+	DBB_MODELER_LOGS=$(grep "^DBB_MODELER_LOGS=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
 	
 	# Drop and recreate the Build MetadataStore folder
 	if [ "$DBB_MODELER_METADATASTORE_TYPE" = "file" ]; then
-		if [ -d $DBB_MODELER_FILE_METADATA_STORE_DIR ]; then 
+		if [ -d $DBB_MODELER_FILE_METADATA_STORE_DIR ]; then
 			rm -rf $DBB_MODELER_FILE_METADATA_STORE_DIR
 		fi
-		if [ ! -d $DBB_MODELER_FILE_METADATA_STORE_DIR ]; then 
+		if [ ! -d $DBB_MODELER_FILE_METADATA_STORE_DIR ]; then
 			mkdir -p $DBB_MODELER_FILE_METADATA_STORE_DIR
 		fi
 	fi
 
-	echo "*******************************************************************"
-	echo "Scan applications using Java implementation"
-	echo "*******************************************************************"
-	
-	# Build Java command for ScanApplication
-	CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.ScanApplication -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\""
-	if [ -n "${APPLICATION_FILTER}" ]; then
-		CMD="${CMD} -a ${APPLICATION_FILTER}"
-	fi
+	# Adding commas before and after the passed parm, to search for pattern including commas
+	APPLICATION_FILTER=",${APPLICATION_FILTER},"
 
-	echo "[INFO] ${CMD}"
-	eval $CMD
-	rc=$?
-	
-	if [ $rc -eq 0 ]; then
-		echo "*******************************************************************"
-		echo "Assess usage using Java implementation"
-		echo "*******************************************************************"
-		
-		# Build Java command for AssessUsage
-		CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.AssessUsage -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\""
-		if [ -n "${APPLICATION_FILTER}" ]; then
-			CMD="${CMD} -a ${APPLICATION_FILTER}"
+	# Scan files
+	cd $DBB_MODELER_APPLICATION_DIR
+	for applicationDir in $(ls | grep -v dbb-zappbuild)
+	do
+		# If no parm specified or if the specified list of applications contains the current application
+		if [ "$APPLICATION_FILTER" == ",," ] || [[ ${APPLICATION_FILTER} == *",${applicationDir},"* ]]; then
+			echo "*******************************************************************"
+			echo "Scan application directory '$DBB_MODELER_APPLICATION_DIR/$applicationDir'"
+			echo "*******************************************************************"
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.ScanApplication -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\""
+			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/3-$applicationDir-scan.log
+			eval $CMD >> $DBB_MODELER_LOGS/3-$applicationDir-scan.log 2>&1
+			rc=$?
+			
+			if [ $rc -ne 0 ]; then
+				echo "[ERROR] Scan failed for application '$applicationDir'. rc=$rc"
+				break
+			fi
 		fi
+	done
 
-		echo "[INFO] ${CMD}"
-		eval $CMD
-		rc=$?
+	# Assess file usage across applications
+	if [ $rc -eq 0 ]; then
+		cd $DBB_MODELER_APPLICATION_DIR
+		for applicationDir in $(ls | grep -v dbb-zappbuild)
+		do
+			# If no parm specified or if the specified list of applications contains the current application
+			if [ "$APPLICATION_FILTER" == ",," ] || [[ ${APPLICATION_FILTER} == *",${applicationDir},"* ]]; then
+				echo "*******************************************************************"
+				echo "Assess Include files & Programs usage for '$applicationDir'"
+				echo "*******************************************************************"
+				CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.AssessUsage -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\""
+				echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/3-$applicationDir-assessUsage.log
+				eval $CMD >> $DBB_MODELER_LOGS/3-$applicationDir-assessUsage.log 2>&1
+				rc=$?
+				
+				if [ $rc -ne 0 ]; then
+					echo "[ERROR] Assess usage failed for application '$applicationDir'. rc=$rc"
+					break
+				fi
+			fi
+		done
 	fi
 fi
 
