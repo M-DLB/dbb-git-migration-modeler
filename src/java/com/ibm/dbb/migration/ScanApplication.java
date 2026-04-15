@@ -181,14 +181,13 @@ public class ScanApplication {
         if (cmd.hasOption("c")) {
             String configFilePath = cmd.getOptionValue("c");
             props.setProperty("configurationFilePath", configFilePath);
-            File configurationFile = new File(configFilePath);
-            if (configurationFile.exists()) {
-                try (FileReader reader = new FileReader(configurationFile)) {
-                    configuration.load(reader);
-                }
-            } else {
-                logger.logMessage("*! [ERROR] The DBB Git Migration Modeler Configuration file '" + 
-                    configFilePath + "' does not exist. Exiting.");
+            
+            // Validate and load configuration using ValidateConfiguration
+            logger.logMessage("** Validating configuration file...");
+            try {
+                configuration = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
+            } catch (Exception e) {
+                logger.logMessage("*! [ERROR] Configuration validation failed: " + e.getMessage());
                 System.exit(1);
             }
         } else {
