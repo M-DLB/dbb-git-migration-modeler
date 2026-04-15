@@ -129,9 +129,9 @@ if [ $rc -eq 0 ]; then
 				echo "Generate properties for application '$applicationDir'"
 				echo "*******************************************************************"
 				
-				CMD="java -cp \"$CLASSPATH\" $JAVA_CLASS -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\""
+				CMD="java -cp \"$CLASSPATH\" $JAVA_CLASS -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\" -l \"$DBB_MODELER_LOGS/4-$applicationDir-generateProperties.log\""
 				echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/4-$applicationDir-generateProperties.log
-				eval $CMD >> $DBB_MODELER_LOGS/4-$applicationDir-generateProperties.log 2>&1
+				eval $CMD
 				rc=$?
 				
 				if [ $rc -ne 0 ]; then

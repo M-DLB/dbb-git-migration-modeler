@@ -124,7 +124,7 @@ if [ $rc -eq 0 ]; then
 
 			# Call MigrateDatasets with proper parameters (matching original DBB migration utility)
 			# Note: The mapping file must be the last argument (positional parameter)
-			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.MigrateDatasets -l \"$DBB_MODELER_LOGS/2-$application.migration.log\" -le UTF-8 -np info -r \"$DBB_MODELER_APPLICATION_DIR/$application\" \"$DBB_MODELER_APPCONFIG_DIR/$mappingFile\""
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.MigrateDatasets -l \"$DBB_MODELER_LOGS/2-$application.migration.log\" -np info -r \"$DBB_MODELER_APPLICATION_DIR/$application\" \"$DBB_MODELER_APPCONFIG_DIR/$mappingFile\""
 			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/2-$application.migration.log
 			eval $CMD
 			rc=$?
