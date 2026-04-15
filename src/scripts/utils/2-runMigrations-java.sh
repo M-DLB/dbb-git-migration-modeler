@@ -122,9 +122,10 @@ if [ $rc -eq 0 ]; then
 			fi
 			cd $DBB_MODELER_APPLICATION_DIR/$application
 
-			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.MigrateDatasets -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$application\""
+			# Call MigrateDatasets with proper parameters (matching original DBB migration utility)
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.MigrateDatasets -l $DBB_MODELER_LOGS/2-$application.migration.log -le UTF-8 -np info -r $DBB_MODELER_APPLICATION_DIR/$application $DBB_MODELER_APPCONFIG_DIR/$mappingFile"
 			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/2-$application.migration.log
-			eval $CMD >> $DBB_MODELER_LOGS/2-$application.migration.log 2>&1
+			eval $CMD
 			rc=$?
 			
 			if [ $rc -ne 0 ]; then
