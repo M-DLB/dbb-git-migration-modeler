@@ -100,19 +100,41 @@ if [ $rc -eq 0 ]; then
 fi
 
 if [ $rc -eq 0 ]; then
-	echo "*******************************************************************"
-	echo "Execute migrations using Java implementation"
-	echo "*******************************************************************"
-	
-	# Build Java command
-	CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.MigrateDatasets -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\""
-	if [ -n "${APPLICATION_FILTER}" ]; then
-		CMD="${CMD} -a ${APPLICATION_FILTER}"
-	fi
+	# Load required configuration properties
+	DBB_MODELER_APPCONFIG_DIR=$(grep "^DBB_MODELER_APPCONFIG_DIR=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
+	DBB_MODELER_APPLICATION_DIR=$(grep "^DBB_MODELER_APPLICATION_DIR=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
+	DBB_MODELER_LOGS=$(grep "^DBB_MODELER_LOGS=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
 
-	echo "[INFO] ${CMD}"
-	eval $CMD
-	rc=$?
+	# Adding commas before and after the passed parm, to search for pattern including commas
+	APPLICATION_FILTER=",${APPLICATION_FILTER},"
+
+	cd $DBB_MODELER_APPCONFIG_DIR
+	for mappingFile in $(ls *.mapping 2>/dev/null)
+	do
+		application=$(echo $mappingFile | awk -F. '{ print $1 }')
+		# If no parm specified or if the specified list of applications contains the current application
+		if [ "$APPLICATION_FILTER" == ",," ] || [[ ${APPLICATION_FILTER} == *",${application},"* ]]; then
+			echo "*******************************************************************"
+			echo "Running the DBB Migration Utility for '$application' using file '$mappingFile'"
+			echo "*******************************************************************"
+			if [ ! -d $DBB_MODELER_APPLICATION_DIR/$application ]; then
+				mkdir -p $DBB_MODELER_APPLICATION_DIR/$application
+			fi
+			cd $DBB_MODELER_APPLICATION_DIR/$application
+
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.MigrateDatasets -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$application\""
+			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/2-$application.migration.log
+			eval $CMD >> $DBB_MODELER_LOGS/2-$application.migration.log 2>&1
+			rc=$?
+			
+			if [ $rc -ne 0 ]; then
+				echo "[ERROR] Migration failed for application '$application'. rc=$rc"
+				break
+			fi
+			
+			cd $DBB_MODELER_APPCONFIG_DIR
+		fi
+	done
 fi
 
 exit $rc
