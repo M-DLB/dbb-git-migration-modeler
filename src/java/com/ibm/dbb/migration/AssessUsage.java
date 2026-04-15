@@ -17,6 +17,7 @@ import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.migration.model.RepositoryPathsMapping;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
 import com.ibm.dbb.migration.utils.Logger;
+import com.ibm.dbb.migration.utils.MetadataStoreUtility;
 import org.apache.commons.cli.*;
 import org.yaml.snakeyaml.Yaml;
 
@@ -646,7 +647,7 @@ public class AssessUsage {
         for (int i = 0; i < files.size(); i++) {
             String file = files.get(i);
             String buildGroup = props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH");
-            LogicalFile lFile = metadataStoreUtils.getLogicalFile(file, buildGroup, buildGroup);
+            LogicalFile lFile = metadataStoreUtils.getLogicalFile(file, buildGroup, "sources");
             
             if (lFile != null) {
                 List<LogicalDependency> logicalDependencies = lFile.getLogicalDependencies();
@@ -707,27 +708,6 @@ public class AssessUsage {
         }
         
         stack.push(v);
-    }
-    
-    // Helper class for metadata store operations
-    private class MetadataStoreUtility {
-        private MetadataStore metadataStore;
-        
-        public void initializeFileMetadataStore(String directory) throws BuildException {
-            metadataStore = MetadataStoreFactory.createFileMetadataStore(directory);
-        }
-        
-        public void initializeDb2MetadataStoreWithPasswordFile(String userId, File passwordFile, Properties props) throws Exception {
-            metadataStore = MetadataStoreFactory.createDb2MetadataStore(userId, passwordFile, props);
-        }
-        
-        public List<BuildGroup> getBuildGroups() throws BuildException {
-            return metadataStore.getBuildGroups();
-        }
-        
-        public LogicalFile getLogicalFile(String file, String buildGroup, String collection) throws BuildException {
-            return metadataStore.getBuildGroup(buildGroup).getCollection(collection).getLogicalFile(file);
-        }
     }
     
     // Helper class for sort results

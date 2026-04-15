@@ -12,13 +12,12 @@ package com.ibm.dbb.migration;
 import com.ibm.dbb.dependency.DependencyScanner;
 import com.ibm.dbb.dependency.LogicalFile;
 import com.ibm.dbb.metadata.Collection;
-import com.ibm.dbb.metadata.MetadataStore;
-import com.ibm.dbb.metadata.MetadataStoreFactory;
-import com.ibm.dbb.metadata.BuildGroup;
 import com.ibm.dbb.build.BuildException;
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.migration.utils.Logger;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.utils.MetadataStoreUtility;
+import com.ibm.dbb.migration.utils.FileUtility;
 import org.apache.commons.cli.*;
 
 import java.io.*;
@@ -353,104 +352,6 @@ public class ScanApplication {
     /**
      * Utility class for metadata store operations
      */
-    private static class MetadataStoreUtility {
-        private MetadataStore metadataStore;
-        
-        public void initializeFileMetadataStore(String directory) throws BuildException {
-            metadataStore = MetadataStoreFactory.createFileMetadataStore(directory);
-        }
-        
-        public void initializeDb2MetadataStoreWithPasswordFile(String jdbcId, File passwordFile,
-                                                                Properties db2Props) throws BuildException {
-            metadataStore = MetadataStoreFactory.createDb2MetadataStore(jdbcId, passwordFile, db2Props);
-        }
-        
-        public void deleteBuildGroup(String name) throws BuildException {
-            if (metadataStore != null && metadataStore.buildGroupExists(name)) {
-                metadataStore.deleteBuildGroup(name);
-            }
-        }
-        
-        public Collection createCollection(String buildGroupName, String collectionName) throws BuildException {
-            if (metadataStore == null) {
-                throw new IllegalStateException("MetadataStore not initialized");
-            }
-            
-            BuildGroup buildGroup;
-            if (!metadataStore.buildGroupExists(buildGroupName)) {
-                buildGroup = metadataStore.createBuildGroup(buildGroupName);
-            } else {
-                buildGroup = metadataStore.getBuildGroup(buildGroupName);
-            }
-            
-            if (buildGroup.collectionExists(collectionName)) {
-                buildGroup.deleteCollection(collectionName);
-            }
-            
-            return buildGroup.createCollection(collectionName);
-        }
-    }
-    
-    /**
-     * Utility class for file operations
-     */
-    private static class FileUtility {
-        public Set<String> getMappedFilesFromApplicationDescriptor(String applicationDirectory,
-                                                                    ApplicationDescriptor descriptor,
-                                                                    Logger logger) throws IOException {
-            Set<String> files = new HashSet<>();
-            
-            if (descriptor == null || descriptor.getSources() == null) {
-                return files;
-            }
-            
-            // Walk the file system to find actual files (like the Groovy version does)
-            Path appDirPath = Paths.get(applicationDirectory);
-            Files.walk(appDirPath)
-                .filter(Files::isRegularFile)
-                .forEach(filePath -> {
-                    try {
-                        String relativeFilePath = relativizePath(filePath.toString(), applicationDirectory);
-                        Path relativeFilePathObj = Paths.get(relativeFilePath);
-                        String relativeDirectory = relativeFilePathObj.getParent() != null ?
-                            relativeFilePathObj.getParent().toString() : "";
-                        
-                        // Find matching source definition
-                        boolean matched = descriptor.getSources().stream()
-                            .anyMatch(source -> source.getRepositoryPath().equals(relativeDirectory));
-                        
-                        if (matched) {
-                            files.add(filePath.toString());
-                        } else {
-                            if (logger != null) {
-                                logger.logSilentMessage("[INFO] No matching Repository Path was found for file '" +
-                                    filePath + "'. Skipping.");
-                            }
-                        }
-                    } catch (Exception e) {
-                        if (logger != null) {
-                            logger.logMessage("*! [WARNING] Error processing file: " + filePath + " - " + e.getMessage());
-                        }
-                    }
-                });
-            
-            return files;
-        }
-        
-        private String relativizePath(String path, String root) {
-            if (!path.startsWith("/") && !path.matches("^[A-Za-z]:.*")) {
-                return path;
-            }
-            try {
-                Path rootPath = Paths.get(root);
-                Path filePath = Paths.get(path.trim());
-                Path relativePath = rootPath.relativize(filePath);
-                return relativePath.toString().replace('\\', '/');
-            } catch (Exception e) {
-                return path;
-            }
-        }
-    }
 }
 
 // Made with Bob
