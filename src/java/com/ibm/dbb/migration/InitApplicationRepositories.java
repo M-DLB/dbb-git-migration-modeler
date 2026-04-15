@@ -34,7 +34,7 @@ public class InitApplicationRepositories {
         try {
             initializer.run(args);
         } catch (Exception e) {
-            logger.logMessage("[ERROR] Repository initialization failed: " + e.getMessage());
+            System.err.println("[ERROR] Repository initialization failed: " + e.getMessage());
             e.printStackTrace();
             System.exit(8);
         }
@@ -75,6 +75,16 @@ public class InitApplicationRepositories {
             applicationFilter = cmd.getOptionValue("a");
         }
         
+        if (cmd.hasOption("l")) {
+            String logFile = cmd.getOptionValue("l");
+            try {
+                logger.create(logFile);
+            } catch (IOException e) {
+                logger.logMessage("[ERROR] Failed to create log file: " + e.getMessage());
+                System.exit(8);
+            }
+        }
+        
         // Validate options and load configuration
         validateOptions();
         
@@ -84,8 +94,11 @@ public class InitApplicationRepositories {
         
         if (exitCode != 0) {
             logger.logMessage("[ERROR] Repository initialization failed. rc=" + exitCode);
+            logger.close();
             System.exit(exitCode);
         }
+        
+        logger.close();
     }
     
     private Options createOptions() {
@@ -104,6 +117,13 @@ public class InitApplicationRepositories {
             .hasArg()
             .argName("appList")
             .desc("Comma-separated list of applications to initialize (optional, default: all)")
+            .build());
+            
+        options.addOption(Option.builder("l")
+            .longOpt("logFile")
+            .hasArg()
+            .argName("logFile")
+            .desc("Relative or absolute path to an output log file (optional)")
             .build());
             
         return options;
