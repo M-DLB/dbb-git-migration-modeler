@@ -341,7 +341,7 @@ public class InitApplicationRepository {
         }
         
         Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        appendToLog(logFile, "[CMD] cp " + sourceFile + " " + targetFile);
+        logger.logMessage("[CMD] cp " + sourceFile + " " + targetFile);
     }
     
     private void customizeZappFile(File appRepoDir, String appName, String logFile) throws IOException {
@@ -751,9 +751,7 @@ public class InitApplicationRepository {
     private void executeCommandWithEnv(List<String> command, File workingDir, String logFile, 
             Map<String, String> environment) throws IOException {
         
-        if (logFile != null) {
-            appendToLog(logFile, "[CMD] " + String.join(" ", command));
-        }
+        logger.logMessage("[CMD] " + String.join(" ", command));
         
         ProcessBuilder pb = new ProcessBuilder(command);
         if (workingDir != null) {
@@ -772,9 +770,7 @@ public class InitApplicationRepository {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
-                if (logFile != null) {
-                    appendToLog(logFile, line);
-                }
+                logger.logMessage(line);
             }
             
             int rc = process.waitFor();
@@ -789,14 +785,6 @@ public class InitApplicationRepository {
         }
     }
     
-    private void appendToLog(String logFile, String message) {
-        try (FileWriter fw = new FileWriter(logFile, true);
-             PrintWriter pw = new PrintWriter(fw)) {
-            pw.println(message);
-        } catch (IOException e) {
-            // Ignore log write errors
-        }
-    }
 }
 
 // Made with Bob
