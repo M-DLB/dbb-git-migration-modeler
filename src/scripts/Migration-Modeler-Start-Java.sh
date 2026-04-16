@@ -264,7 +264,7 @@ if [ $rc -eq 0 ]; then
 	#### Summary
 	echo
 	echo "[PHASE] Summary"
-	$DBB_HOME/bin/groovyz $DBB_MODELER_HOME/src/groovy/utils/calculateDependenciesOrder.groovy -a $DBB_MODELER_APPLICATION_DIR
+	java -cp "$CLASSPATH" com.ibm.dbb.migration.CalculateDependenciesOrder -a "$DBB_MODELER_APPLICATION_DIR"
 	if [ "$repositoriesInitialized" = true ]; then
 		echo
 		echo "***********************************************************************************************************"
