@@ -90,12 +90,13 @@ public class Logger {
 
     /**
      * Log a silent message (only to file, not to console)
+     * Useful for logging command details without cluttering console output
      * @param message The message to log
      */
     public void logSilentMessage(String message) {
         if (logfileWriter != null) {
             try {
-                logfileWriter.write(dateFormat.format(new Date()) + " - Additional message - " + message);
+                logfileWriter.write(message);
                 logfileWriter.newLine();
                 logfileWriter.flush();
             } catch (IOException e) {

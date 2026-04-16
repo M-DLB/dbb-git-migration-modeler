@@ -341,7 +341,7 @@ public class InitApplicationRepository {
         }
         
         Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        logger.logMessage("[CMD] cp " + sourceFile + " " + targetFile);
+        logger.logSilentMessage("[CMD] cp " + sourceFile + " " + targetFile);
     }
     
     private void customizeZappFile(File appRepoDir, String appName, String logFile) throws IOException {
@@ -751,7 +751,7 @@ public class InitApplicationRepository {
     private void executeCommandWithEnv(List<String> command, File workingDir, String logFile, 
             Map<String, String> environment) throws IOException {
         
-        logger.logMessage("[CMD] " + String.join(" ", command));
+        logger.logSilentMessage("[CMD] " + String.join(" ", command));
         
         ProcessBuilder pb = new ProcessBuilder(command);
         if (workingDir != null) {
@@ -770,7 +770,7 @@ public class InitApplicationRepository {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
-                logger.logMessage(line);
+                logger.logSilentMessage(line);
             }
             
             int rc = process.waitFor();
