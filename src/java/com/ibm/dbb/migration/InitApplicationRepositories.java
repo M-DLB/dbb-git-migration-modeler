@@ -189,10 +189,23 @@ public class InitApplicationRepositories {
             File appRepoDir = new File(applicationDir, appName);
             String logFile = logsDir + File.separator + "5-" + appName + "-initApplicationRepository.log";
             
+            // Create application-specific logger if processing multiple applications
+            Logger appLogger = logger;
+            if (applicationsToProcess.size() > 1) {
+                try {
+                    appLogger = new Logger();
+                    appLogger.create(logFile);
+                } catch (IOException e) {
+                    logger.logMessage("[ERROR] Failed to create log file for " + appName + ": " + e.getMessage());
+                    exitCode = 8;
+                    continue;
+                }
+            }
+            
             try {
                 // Check if already a Git repository
                 if (isGitRepository(appRepoDir)) {
-                    logger.logMessage("*! [WARNING] '" + appRepoDir.getAbsolutePath() +
+                    appLogger.logMessage("*! [WARNING] '" + appRepoDir.getAbsolutePath() +
                         "' is already a Git repository. Skip initialization for " + appName + ".");
                     continue;
                 }
@@ -242,7 +255,7 @@ public class InitApplicationRepositories {
                 createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
                 
                 if (exitCode == 0) {
-                    logger.logMessage("** Initializing Git repository for application '" + appName +
+                    appLogger.logMessage("** Initializing Git repository for application '" + appName +
                         "' completed successfully. rc=" + exitCode);
                     
                     // Run preview build
@@ -254,15 +267,20 @@ public class InitApplicationRepositories {
                     // Publish artifacts if enabled
                     publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
                 } else {
-                    logger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
+                    appLogger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
                         "' failed. rc=" + exitCode);
                 }
                 
             } catch (Exception e) {
                 exitCode = 8;
-                logger.logMessage("*! [ERROR] Failed to initialize repository for '" + appName + "': " +
+                appLogger.logMessage("*! [ERROR] Failed to initialize repository for '" + appName + "': " +
                     e.getMessage() + ". rc=" + exitCode);
                 e.printStackTrace();
+            } finally {
+                // Close application-specific logger if it was created
+                if (appLogger != logger) {
+                    appLogger.close();
+                }
             }
         }
     }
