@@ -108,8 +108,6 @@ if [ $rc -eq 0 ]; then
 	# Determine which Java class to call based on BUILD_FRAMEWORK
 	if [ "$BUILD_FRAMEWORK" = "zBuilder" ]; then
 		JAVA_CLASS="com.ibm.dbb.migration.GenerateZBuilderProperties"
-	elif [ "$BUILD_FRAMEWORK" = "zAppBuild" ]; then
-		JAVA_CLASS="com.ibm.dbb.migration.GenerateZAppBuildProperties"
 	else
 		rc=8
 		ERRMSG="[ERROR] Unknown BUILD_FRAMEWORK: $BUILD_FRAMEWORK. rc="$rc

@@ -591,72 +591,31 @@ public class InitApplicationRepositories {
         File appLogDir = new File(logsDir, appName);
         appLogDir.mkdirs();
         
-        String buildFramework = configProperties.getProperty("BUILD_FRAMEWORK");
+        // Only zBuilder is supported
         String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
         String dbbHome = System.getenv("DBB_HOME");
+        String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
+        
+        Map<String, String> env = new HashMap<>(System.getenv());
+        env.put("DBB_BUILD", zBuilderPath);
         
         List<String> command = new ArrayList<>();
+        command.add(dbbHome + "/bin/dbb");
+        command.add("build");
+        command.add("full");
+        command.add("--hlq");
+        command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
+        command.add("--preview");
         
-        if ("zBuilder".equals(buildFramework)) {
-            String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
-            Map<String, String> env = new HashMap<>(System.getenv());
-            env.put("DBB_BUILD", zBuilderPath);
-            
-            command.add(dbbHome + "/bin/dbb");
-            command.add("build");
-            command.add("full");
-            command.add("--hlq");
-            command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
-            command.add("--preview");
-            
-            if ("db2".equals(metadataStoreType)) {
-                command.add("--dbid");
-                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
-                command.add("--dbpw");
-                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
-            }
-            
-            executeCommandWithEnv(command, appRepoDir, 
-                new File(appLogDir, "build-preview-" + appName + ".log").getAbsolutePath(), env);
-            
-        } else if ("zAppBuild".equals(buildFramework)) {
-            String zAppBuildPath = configProperties.getProperty("DBB_ZAPPBUILD");
-            String applicationDir = configProperties.getProperty("DBB_MODELER_APPLICATION_DIR");
-            
-            command.add(dbbHome + "/bin/groovyz");
-            command.add(zAppBuildPath + "/build.groovy");
-            command.add("--workspace");
-            command.add(applicationDir);
-            command.add("--application");
-            command.add(appName);
-            command.add("--outDir");
-            command.add(appLogDir.getAbsolutePath());
-            command.add("--fullBuild");
-            command.add("--hlq");
-            command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
-            command.add("--preview");
-            command.add("--logEncoding");
-            command.add("UTF-8");
-            command.add("--applicationCurrentBranch");
-            command.add(configProperties.getProperty("APPLICATION_DEFAULT_BRANCH", "main"));
-            
-            if ("file".equals(metadataStoreType)) {
-                command.add("--propOverwrites");
-                command.add("createBuildOutputSubfolder=false,metadataStoreType=" + metadataStoreType + 
-                    ",metadataStoreFileLocation=" + configProperties.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR"));
-            } else if ("db2".equals(metadataStoreType)) {
-                command.add("--propOverwrites");
-                command.add("createBuildOutputSubfolder=false,metadataStoreType=" + metadataStoreType + 
-                    ",metadataStoreDb2ConnectionConf=" + configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE"));
-                command.add("--id");
-                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
-                command.add("--pwFile");
-                command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
-            }
-            
-            executeCommand(command, null, 
-                new File(appLogDir, "build-preview-" + appName + ".log").getAbsolutePath());
+        if ("db2".equals(metadataStoreType)) {
+            command.add("--dbid");
+            command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
+            command.add("--dbpw");
+            command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
         }
+        
+        executeCommandWithEnv(command, appRepoDir,
+            new File(appLogDir, "build-preview-" + appName + ".log").getAbsolutePath(), env);
         
         if (exitCode == 0) {
             logger.logMessage("** Preview Build of application '" + appName + "' completed successfully. rc=" + exitCode);

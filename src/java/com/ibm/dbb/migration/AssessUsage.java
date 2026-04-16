@@ -440,17 +440,18 @@ public class AssessUsage {
             
             // Analyze impacts
             logger.logMessage("** Analyzing impacted applications for file '" + props.getProperty("application") + "/" + qualifiedFile + "'.");
-            Set<ImpactFile> impactedFiles = findImpactedFiles(
+            Map<ImpactFile, String> impactedFilesWithBuildGroup = findImpactedFilesWithBuildGroup(
                 properties.get("impactSearchRule"),
                 props.getProperty("application") + "/" + qualifiedFile
             );
             
             Set<String> referencingCollections = new HashSet<>();
-            if (!impactedFiles.isEmpty()) {
+            if (!impactedFilesWithBuildGroup.isEmpty()) {
                 logger.logMessage("\tFiles depending on '" + repositoryPath + "/" + file + "." + fileExtension + "' :");
-                for (ImpactFile impactedFile : impactedFiles) {
-                    String referencingCollection = impactedFile.getCollection().getName()
-                        .replace("-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"), "");
+                for (Map.Entry<ImpactFile, String> entry : impactedFilesWithBuildGroup.entrySet()) {
+                    ImpactFile impactedFile = entry.getKey();
+                    String buildGroupName = entry.getValue();
+                    String referencingCollection = buildGroupName.replace("-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"), "");
                     logger.logMessage("\t'" + impactedFile.getFile() + "' in Application '" + referencingCollection + "'");
                     referencingCollections.add(referencingCollection);
                 }
@@ -547,17 +548,18 @@ public class AssessUsage {
             String qualifiedFile = repositoryPath + "/" + file + "." + fileExtension;
             
             logger.logMessage("** Analyzing impacted applications for file '" + props.getProperty("application") + "/" + qualifiedFile + "'.");
-            Set<ImpactFile> impactedFiles = findImpactedFiles(
+            Map<ImpactFile, String> impactedFilesWithBuildGroup = findImpactedFilesWithBuildGroup(
                 properties.get("impactSearchRule"),
                 props.getProperty("application") + "/" + qualifiedFile
             );
             
             Set<String> referencingCollections = new HashSet<>();
-            if (!impactedFiles.isEmpty()) {
+            if (!impactedFilesWithBuildGroup.isEmpty()) {
                 logger.logMessage("\tFiles depending on '" + repositoryPath + "/" + file + "." + fileExtension + "' :");
-                for (ImpactFile impactedFile : impactedFiles) {
-                    String referencingCollection = impactedFile.getCollection().getName()
-                        .replace("-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"), "");
+                for (Map.Entry<ImpactFile, String> impactEntry : impactedFilesWithBuildGroup.entrySet()) {
+                    ImpactFile impactedFile = impactEntry.getKey();
+                    String buildGroupName = impactEntry.getValue();
+                    String referencingCollection = buildGroupName.replace("-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"), "");
                     logger.logMessage("\t'" + impactedFile.getFile() + "' in Application '" + referencingCollection + "'");
                     referencingCollections.add(referencingCollection);
                 }
@@ -608,8 +610,8 @@ public class AssessUsage {
         }
     }
     
-    private Set<ImpactFile> findImpactedFiles(String impactSearch, String file) throws BuildException, DependencyException, IOException {
-        Set<ImpactFile> allImpacts = new HashSet<>();
+    private Map<ImpactFile, String> findImpactedFilesWithBuildGroup(String impactSearch, String file) throws BuildException, DependencyException, IOException {
+        Map<ImpactFile, String> impactsWithBuildGroup = new HashMap<>();
         
         for (BuildGroup buildGroup : metadataStoreUtils.getBuildGroups()) {
             if ("dbb_default".equals(buildGroup.getName())) continue;
@@ -624,12 +626,14 @@ public class AssessUsage {
                     impactSearch, buildGroup.getName(), collections);
                 Set<ImpactFile> impacts = finder.findImpactedFiles(file, props.getProperty("DBB_MODELER_APPLICATION_DIR"));
                 if (impacts != null) {
-                    allImpacts.addAll(impacts);
+                    for (ImpactFile impact : impacts) {
+                        impactsWithBuildGroup.put(impact, buildGroup.getName());
+                    }
                 }
             }
         }
         
-        return allImpacts;
+        return impactsWithBuildGroup;
     }
     
     private SortResult sortListByDependencyTree(List<String> files) throws BuildException {
@@ -645,9 +649,11 @@ public class AssessUsage {
         
         // Build dependency graph
         for (int i = 0; i < files.size(); i++) {
-            String file = files.get(i);
+            String applicationFolder = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + props.getProperty("application");
+            String file = applicationFolder + "/" + files.get(i);
             String buildGroup = props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH");
-            LogicalFile lFile = metadataStoreUtils.getLogicalFile(file, buildGroup, "sources");
+            String collectionName = "sources";
+            LogicalFile lFile = metadataStoreUtils.getLogicalFile(file, buildGroup, collectionName);
             
             if (lFile != null) {
                 List<LogicalDependency> logicalDependencies = lFile.getLogicalDependencies();

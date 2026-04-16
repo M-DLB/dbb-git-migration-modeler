@@ -146,9 +146,9 @@ validateConfigurationFile() {
 			echo $ERRMSG
 		fi
 
-		if [ "${BUILD_FRAMEWORK}" != "zBuilder" ] && [ "${BUILD_FRAMEWORK}" != "zAppBuild" ]; then
+		if [ "${BUILD_FRAMEWORK}" != "zBuilder" ]; then
 			rc=8
-			ERRMSG="[ERROR] The specified Build Framework '${BUILD_FRAMEWORK}' is not a valid option ('zBuilder' or 'zAppBuild')."
+			ERRMSG="[ERROR] The specified Build Framework '${BUILD_FRAMEWORK}' is not valid. Only 'zBuilder' is supported."
 			echo $ERRMSG
 		fi
 		
@@ -158,11 +158,6 @@ validateConfigurationFile() {
 			echo $ERRMSG
 		fi
 		
-		if [ "${BUILD_FRAMEWORK}" == "zAppBuild" ] && [ ! -d "${DBB_ZAPPBUILD}" ]; then
-			rc=8
-			ERRMSG="[ERROR] The dbb-zappbuild instance '${DBB_ZAPPBUILD}' doesn't exist."
-			echo $ERRMSG
-		fi
 		
 		if [ ! -d "${DBB_COMMUNITY_REPO}" ]; then
 			rc=8

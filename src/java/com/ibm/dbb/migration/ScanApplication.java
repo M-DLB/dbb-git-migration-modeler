@@ -90,13 +90,14 @@ public class ScanApplication {
         List<LogicalFile> logicalFiles = scanFiles(files);
         
         // Store results
-        String collectionName = props.getProperty("application") + "-" + 
+        String buildGroupName = props.getProperty("application") + "-" +
             props.getProperty("APPLICATION_DEFAULT_BRANCH");
-        logger.logMessage("** Storing results in the '" + collectionName + "' DBB Collection.");
+        String collectionName = "sources";
+        logger.logMessage("** Storing results in the '" + collectionName + "' collection of build group '" + buildGroupName + "'.");
         
         // Manage Build Groups and Collections
-        metadataStoreUtils.deleteBuildGroup(collectionName);
-        Collection collection = metadataStoreUtils.createCollection(collectionName, collectionName);
+        metadataStoreUtils.deleteBuildGroup(buildGroupName);
+        Collection collection = metadataStoreUtils.createCollection(buildGroupName, collectionName);
         
         // Store results
         collection.addLogicalFiles(logicalFiles);

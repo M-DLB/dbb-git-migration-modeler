@@ -88,26 +88,17 @@ public class ValidateConfiguration {
             throw new Exception("Configuration validation failed");
         }
         
-        // Validate build framework
+        // Validate build framework - only zBuilder is supported
         String buildFramework = configProperties.getProperty("BUILD_FRAMEWORK");
-        if (!"zBuilder".equals(buildFramework) && !"zAppBuild".equals(buildFramework)) {
+        if (!"zBuilder".equals(buildFramework)) {
             throw new Exception("The specified Build Framework '" + buildFramework +
-                "' is not a valid option ('zBuilder' or 'zAppBuild').");
+                "' is not valid. Only 'zBuilder' is supported.");
         }
         
-        // Validate build framework directories
-        if ("zBuilder".equals(buildFramework)) {
-            String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
-            if (zBuilderPath == null || !new File(zBuilderPath).isDirectory()) {
-                throw new Exception("The zBuilder instance '" + zBuilderPath + "' doesn't exist.");
-            }
-        }
-        
-        if ("zAppBuild".equals(buildFramework)) {
-            String zAppBuildPath = configProperties.getProperty("DBB_ZAPPBUILD");
-            if (zAppBuildPath == null || !new File(zAppBuildPath).isDirectory()) {
-                throw new Exception("The dbb-zappbuild instance '" + zAppBuildPath + "' doesn't exist.");
-            }
+        // Validate zBuilder directory
+        String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
+        if (zBuilderPath == null || !new File(zBuilderPath).isDirectory()) {
+            throw new Exception("The zBuilder instance '" + zBuilderPath + "' doesn't exist.");
         }
         
         // Validate DBB Community repository
