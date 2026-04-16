@@ -118,7 +118,7 @@ if [ $rc -eq 0 ]; then
 			echo "Initialize application's directory for application '$applicationDir'"
 			echo "*******************************************************************"
 			
-			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.InitApplicationRepositories -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\" -l \"$DBB_MODELER_LOGS/5-$applicationDir-initApplicationRepository.log\""
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.InitApplicationRepository -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\" -l \"$DBB_MODELER_LOGS/5-$applicationDir-initApplicationRepository.log\""
 			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/5-$applicationDir-initApplicationRepository.log
 			eval $CMD
 			rc=$?

@@ -10,6 +10,11 @@
 package com.ibm.dbb.migration;
 
 import com.ibm.dbb.migration.utils.Logger;
+import com.ibm.dbb.migration.utils.MetadataStoreUtility;
+import com.ibm.dbb.migration.utils.ZappUtility;
+import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.model.ApplicationDescriptor;
+import com.ibm.dbb.build.BuildException;
 import org.apache.commons.cli.*;
 
 import java.io.*;
@@ -17,10 +22,10 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Initializes Git repositories for migrated applications.
+ * Initializes Git repository for a single migrated application.
  * Equivalent to the 5-initApplicationRepositories.sh shell script.
  */
-public class InitApplicationRepositories {
+public class InitApplicationRepository {
     
     private String configFilePath;
     private String applicationFilter;
@@ -29,7 +34,7 @@ public class InitApplicationRepositories {
     private Logger logger;
     
     public static void main(String[] args) {
-        InitApplicationRepositories initializer = new InitApplicationRepositories();
+        InitApplicationRepository initializer = new InitApplicationRepository();
         try {
             initializer.run(args);
         } catch (Exception e) {
@@ -53,8 +58,8 @@ public class InitApplicationRepositories {
             cmd = parser.parse(options, args);
         } catch (ParseException e) {
             logger.logMessage("[ERROR] Error parsing command line: " + e.getMessage());
-            formatter.printHelp("InitApplicationRepositories [options]",
-                "Initializes Git repositories for migrated applications", 
+            formatter.printHelp("InitApplicationRepository [options]",
+                "Initializes Git repository for a migrated application",
                 options, "", true);
             System.exit(2);
             return;
@@ -65,7 +70,7 @@ public class InitApplicationRepositories {
             configFilePath = cmd.getOptionValue("c");
         } else {
             logger.logMessage("[ERROR] Configuration file option (-c) is required.");
-            formatter.printHelp("InitApplicationRepositories [options]", options);
+            formatter.printHelp("InitApplicationRepository [options]", options);
             System.exit(2);
             return;
         }
@@ -74,7 +79,7 @@ public class InitApplicationRepositories {
             applicationFilter = cmd.getOptionValue("a");
         } else {
             logger.logMessage("[ERROR] Application name option (-a) is required.");
-            formatter.printHelp("InitApplicationRepositories [options]", options);
+            formatter.printHelp("InitApplicationRepository [options]", options);
             System.exit(2);
             return;
         }
@@ -283,19 +288,37 @@ public class InitApplicationRepositories {
         logger.logMessage("** Reset DBB Metadatastore buildGroup '" + buildGroupName +
             "' for repository '" + appName + "'");
         
-        String dbbHome = System.getenv("DBB_HOME");
-        String modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
-        
-        List<String> command = Arrays.asList(
-            dbbHome + "/bin/groovyz",
-            modelerHome + "/src/groovy/utils/metadataStoreUtility.groovy",
-            "-c", configFilePath,
-            "--deleteBuildGroup",
-            "--buildGroup", buildGroupName,
-            "-l", logFile
-        );
-        
-        executeCommand(command, null, logFile);
+        try {
+            MetadataStoreUtility metadataStoreUtil = new MetadataStoreUtility();
+            
+            // Initialize metadata store based on type
+            String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
+            
+            if ("file".equalsIgnoreCase(metadataStoreType)) {
+                String metadataStoreDir = configProperties.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR");
+                metadataStoreUtil.initializeFileMetadataStore(metadataStoreDir);
+            } else if ("db2".equalsIgnoreCase(metadataStoreType)) {
+                String jdbcId = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID");
+                String passwordFile = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE");
+                String db2ConfigFile = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE");
+                
+                Properties db2Props = new Properties();
+                try (FileInputStream fis = new FileInputStream(db2ConfigFile)) {
+                    db2Props.load(fis);
+                }
+                
+                metadataStoreUtil.initializeDb2MetadataStoreWithPasswordFile(jdbcId, new File(passwordFile), db2Props);
+            }
+            
+            // Delete the build group
+            metadataStoreUtil.deleteBuildGroup(buildGroupName);
+            logger.logMessage("** Successfully deleted buildGroup '" + buildGroupName + "'");
+            
+        } catch (BuildException e) {
+            exitCode = 8;
+            logger.logMessage("[ERROR] Failed to reset buildGroup '" + buildGroupName + "': " + e.getMessage());
+            throw new IOException("Failed to reset buildGroup", e);
+        }
     }
     
     private void initializeGitRepository(File directory, String defaultBranch, String logFile) throws IOException {
@@ -334,19 +357,27 @@ public class InitApplicationRepositories {
         
         Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         
-        // Customize ZAPP file using groovy utility
-        String dbbHome = System.getenv("DBB_HOME");
-        String modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
-        
-        List<String> command = Arrays.asList(
-            dbbHome + "/bin/groovyz",
-            modelerHome + "/src/groovy/utils/zappUtils.groovy",
-            "-c", configFilePath,
-            "-a", appName,
-            "-l", logFile
-        );
-        
-        executeCommand(command, null, logFile);
+        // Customize ZAPP file using Java utility
+        try {
+            // Read application descriptor
+            File appDescriptorFile = new File(appRepoDir, "applicationDescriptor.yml");
+            if (!appDescriptorFile.exists()) {
+                exitCode = 8;
+                logger.logMessage("[ERROR] Application descriptor file not found: " + appDescriptorFile.getAbsolutePath());
+                return;
+            }
+            
+            ApplicationDescriptor appDescriptor = ApplicationDescriptorUtils.readApplicationDescriptor(appDescriptorFile);
+            
+            // Customize ZAPP file
+            ZappUtility.customizeZappFile(targetFile, appDescriptor);
+            logger.logMessage("** Successfully customized ZAPP file for application '" + appName + "'");
+            
+        } catch (Exception e) {
+            exitCode = 8;
+            logger.logMessage("[ERROR] Failed to customize ZAPP file: " + e.getMessage());
+            throw new IOException("Failed to customize ZAPP file", e);
+        }
     }
     
     private void createBaselineReferenceConfig(File appRepoDir, String appName, String defaultBranch) throws IOException {
@@ -605,19 +636,32 @@ public class InitApplicationRepositories {
         logger.logMessage("** Update owner of collections for DBB Metadatastore buildGroup '" +
             buildGroupName + "' for repository '" + appName + "'");
         
-        String dbbHome = System.getenv("DBB_HOME");
-        String modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
         String pipelineUser = configProperties.getProperty("PIPELINE_USER");
         
-        List<String> command = Arrays.asList(
-            dbbHome + "/bin/groovyz",
-            modelerHome + "/src/groovy/utils/metadataStoreUtility.groovy",
-            "-c", configFilePath,
-            "--setBuildGroupOwner", pipelineUser,
-            "--buildGroup", buildGroupName
-        );
-        
-        executeCommand(command, null, logFile);
+        try {
+            MetadataStoreUtility metadataStoreUtil = new MetadataStoreUtility();
+            
+            // Initialize DB2 metadata store
+            String jdbcId = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID");
+            String passwordFile = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE");
+            String db2ConfigFile = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE");
+            
+            Properties db2Props = new Properties();
+            try (FileInputStream fis = new FileInputStream(db2ConfigFile)) {
+                db2Props.load(fis);
+            }
+            
+            metadataStoreUtil.initializeDb2MetadataStoreWithPasswordFile(jdbcId, new File(passwordFile), db2Props);
+            
+            // Set build group owner
+            metadataStoreUtil.setBuildGroupOwner(buildGroupName, pipelineUser);
+            logger.logMessage("** Successfully set owner '" + pipelineUser + "' for buildGroup '" + buildGroupName + "'");
+            
+        } catch (BuildException e) {
+            exitCode = 8;
+            logger.logMessage("[ERROR] Failed to set buildGroup owner: " + e.getMessage());
+            throw new IOException("Failed to set buildGroup owner", e);
+        }
     }
     
     private void publishArtifacts(File appRepoDir, String appName, String defaultBranch, String logsDir, String logFile) throws IOException {

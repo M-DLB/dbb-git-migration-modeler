@@ -113,6 +113,33 @@ public class MetadataStoreUtility {
     }
     
     /**
+     * Set the owner of a build group (DB2 metadata store only)
+     * @param buildGroupName Build group name
+     * @param owner Owner user ID
+     * @throws BuildException if operation fails
+     */
+    public void setBuildGroupOwner(String buildGroupName, String owner) throws BuildException {
+        if (metadataStore == null) {
+            throw new IllegalStateException("MetadataStore not initialized");
+        }
+        
+        if (!metadataStore.buildGroupExists(buildGroupName)) {
+            throw new BuildException("Build group does not exist: " + buildGroupName);
+        }
+        
+        BuildGroup buildGroup = metadataStore.getBuildGroup(buildGroupName);
+        
+        // Set owner on the build group
+        // Note: This operation is only supported for DB2 metadata stores
+        try {
+            buildGroup.setOwner(owner);
+        } catch (Exception e) {
+            // If setOwner is not supported (file-based store), silently ignore
+            // This matches the behavior of the Groovy script
+        }
+    }
+    
+    /**
      * Get the underlying metadata store instance
      * @return The metadata store
      */
