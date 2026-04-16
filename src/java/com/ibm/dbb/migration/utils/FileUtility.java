@@ -11,10 +11,12 @@ package com.ibm.dbb.migration.utils;
 
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -91,6 +93,43 @@ public class FileUtility {
         } catch (Exception e) {
             return path;
         }
+    }
+    
+    /**
+     * Copy a file while preserving USS file tags on z/OS systems.
+     * Uses DBB FileUtils to get and set file tags to ensure proper encoding is maintained.
+     *
+     * @param sourceFile Source file to copy from
+     * @param targetFile Target file to copy to
+     * @throws IOException if copy operation fails
+     */
+    public static void copyFileWithTags(File sourceFile, File targetFile) throws IOException {
+        // Perform the file copy
+        Files.copy(sourceFile.toPath(), targetFile.toPath(),
+            StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        
+        // Preserve USS file tags on z/OS systems
+        try {
+            String fileTag = com.ibm.dbb.utils.FileUtils.getFileTag(sourceFile.getAbsolutePath());
+            if (fileTag != null && !fileTag.isEmpty()) {
+                com.ibm.dbb.utils.FileUtils.setFileTag(targetFile.getAbsolutePath(), fileTag);
+            }
+        } catch (Exception e) {
+            // If file tag operations fail (e.g., not on z/OS), continue without error
+            // The file has already been copied successfully
+        }
+    }
+    
+    /**
+     * Copy a file while preserving USS file tags on z/OS systems.
+     * Uses DBB FileUtils to get and set file tags to ensure proper encoding is maintained.
+     *
+     * @param sourcePath Source file path to copy from
+     * @param targetPath Target file path to copy to
+     * @throws IOException if copy operation fails
+     */
+    public static void copyFileWithTags(Path sourcePath, Path targetPath) throws IOException {
+        copyFileWithTags(sourcePath.toFile(), targetPath.toFile());
     }
 }
 

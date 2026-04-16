@@ -16,6 +16,7 @@ import com.ibm.dbb.metadata.*;
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.migration.model.RepositoryPathsMapping;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.utils.FileUtility;
 import com.ibm.dbb.migration.utils.Logger;
 import com.ibm.dbb.migration.utils.MetadataStoreUtility;
 import org.apache.commons.cli.*;
@@ -294,14 +295,7 @@ public class AssessUsage {
         if (updatedApplicationDescriptorFile.exists()) {
             applicationDescriptor = appDescUtils.readApplicationDescriptor(updatedApplicationDescriptorFile);
         } else if (originalApplicationDescriptorFile.exists()) {
-            Files.copy(originalApplicationDescriptorFile.toPath(), updatedApplicationDescriptorFile.toPath(), 
-                StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
-            // Set file tag to UTF-8 (z/OS specific - will be no-op on other platforms)
-            try {
-                Runtime.getRuntime().exec("chtag -tc UTF-8 " + updatedApplicationDescriptorFile.getAbsolutePath()).waitFor();
-            } catch (Exception e) {
-                // Ignore on non-z/OS systems
-            }
+            FileUtility.copyFileWithTags(originalApplicationDescriptorFile, updatedApplicationDescriptorFile);
             applicationDescriptor = appDescUtils.readApplicationDescriptor(updatedApplicationDescriptorFile);
         } else {
             logger.logMessage("*! [ERROR] Application Descriptor file '" + originalApplicationDescriptorFile.getPath() + "' was not found. Exiting.");

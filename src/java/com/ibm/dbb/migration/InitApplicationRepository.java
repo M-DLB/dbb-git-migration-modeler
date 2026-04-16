@@ -13,6 +13,7 @@ import com.ibm.dbb.migration.utils.Logger;
 import com.ibm.dbb.migration.utils.MetadataStoreUtility;
 import com.ibm.dbb.migration.utils.ZappUtility;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.utils.FileUtility;
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.build.BuildException;
 import org.apache.commons.cli.*;
@@ -340,7 +341,7 @@ public class InitApplicationRepository {
             targetFile.delete();
         }
         
-        Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        FileUtility.copyFileWithTags(sourceFile, targetFile);
         logger.logSilentMessage("[CMD] cp " + sourceFile + " " + targetFile);
     }
     
@@ -355,7 +356,7 @@ public class InitApplicationRepository {
             targetFile.delete();
         }
         
-        Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        FileUtility.copyFileWithTags(sourceFile, targetFile);
         
         // Customize ZAPP file using Java utility
         try {
@@ -476,8 +477,7 @@ public class InitApplicationRepository {
             return;
         }
         
-        Files.copy(ciFile.toPath(), new File(appRepoDir, "azure-pipelines.yml").toPath(), 
-            StandardCopyOption.REPLACE_EXISTING);
+        FileUtility.copyFileWithTags(ciFile, new File(appRepoDir, "azure-pipelines.yml"));
         
         // Copy deployment templates
         File deploymentDir = new File(appRepoDir, "deployment");
@@ -500,8 +500,7 @@ public class InitApplicationRepository {
             return;
         }
         
-        Files.copy(ciFile.toPath(), new File(appRepoDir, ".gitlab-ci.yml").toPath(), 
-            StandardCopyOption.REPLACE_EXISTING);
+        FileUtility.copyFileWithTags(ciFile, new File(appRepoDir, ".gitlab-ci.yml"));
     }
     
     private void copyJenkinsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
@@ -512,8 +511,7 @@ public class InitApplicationRepository {
             return;
         }
         
-        Files.copy(ciFile.toPath(), new File(appRepoDir, "Jenkinsfile").toPath(), 
-            StandardCopyOption.REPLACE_EXISTING);
+        FileUtility.copyFileWithTags(ciFile, new File(appRepoDir, "Jenkinsfile"));
     }
     
     private void copyGitHubActionsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
@@ -544,7 +542,7 @@ public class InitApplicationRepository {
                 if (file.isDirectory()) {
                     copyDirectory(file, targetFile);
                 } else {
-                    Files.copy(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    FileUtility.copyFileWithTags(file, targetFile);
                 }
             }
         }

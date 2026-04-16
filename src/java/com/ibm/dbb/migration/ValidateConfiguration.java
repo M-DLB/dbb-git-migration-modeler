@@ -9,6 +9,7 @@
 
 package com.ibm.dbb.migration;
 
+import com.ibm.dbb.migration.utils.FileUtility;
 import org.apache.commons.cli.*;
 
 import java.io.*;
@@ -461,7 +462,7 @@ public class ValidateConfiguration {
         String repoPathMapping = configProperties.getProperty("REPOSITORY_PATH_MAPPING_FILE");
         System.out.println("  [INFO] Copying sample Repository Paths Mapping file to '" + repoPathMapping + "'");
         Files.createDirectories(Paths.get(repoPathMapping).getParent());
-        Files.copy(
+        FileUtility.copyFileWithTags(
             Paths.get(modelerHome, "samples/repositoryPathsMapping.yaml"),
             Paths.get(repoPathMapping)
         );
@@ -470,7 +471,7 @@ public class ValidateConfiguration {
         String typesMapping = configProperties.getProperty("APPLICATION_TYPES_MAPPING");
         System.out.println("  [INFO] Copying sample Types Mapping file to '" + typesMapping + "'");
         Files.createDirectories(Paths.get(typesMapping).getParent());
-        Files.copy(
+        FileUtility.copyFileWithTags(
             Paths.get(modelerHome, "samples/typesMapping.yaml"),
             Paths.get(typesMapping)
         );
@@ -479,7 +480,7 @@ public class ValidateConfiguration {
         String typesConfig = configProperties.getProperty("TYPE_CONFIGURATIONS_FILE");
         System.out.println("  [INFO] Copying sample Types Configurations file to '" + typesConfig + "'");
         Files.createDirectories(Paths.get(typesConfig).getParent());
-        Files.copy(
+        FileUtility.copyFileWithTags(
             Paths.get(modelerHome, "samples/typesConfigurations.yaml"),
             Paths.get(typesConfig)
         );
@@ -515,7 +516,7 @@ public class ValidateConfiguration {
                 if (file.isDirectory()) {
                     copyDirectory(file, targetFile);
                 } else {
-                    Files.copy(file.toPath(), targetFile.toPath());
+                    FileUtility.copyFileWithTags(file, targetFile);
                 }
             }
         }
