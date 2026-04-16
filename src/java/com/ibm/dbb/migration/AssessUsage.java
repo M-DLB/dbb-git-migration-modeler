@@ -491,6 +491,9 @@ public class AssessUsage {
                     logger.logMessage("\t==> Updating usage of Include File '" + file + "' to '" + usageLabel + "'.");
                     appDescUtils.appendFileDefinition(applicationDescriptor, sourceGroupName, language,
                         languageProcessor, artifactsType, fileExtension, repositoryPath, file, type, usageLabel);
+                    
+                    // Update consumer application descriptor
+                    updateConsumerApplicationDescriptor(referencingApp, "artifactrepository", applicationDescriptor);
                 }
             }
             appDescUtils.writeApplicationDescriptor(updatedApplicationDescriptorFile, applicationDescriptor);
@@ -522,6 +525,14 @@ public class AssessUsage {
                     }
                 }
             }
+            
+            // Update consumers for files referenced by multiple applications
+            for (String consumerCollection : referencingCollections) {
+                if (!consumerCollection.equals(props.getProperty("application"))) {
+                    updateConsumerApplicationDescriptor(consumerCollection, "artifactrepository", applicationDescriptor);
+                }
+            }
+            
             appDescUtils.writeApplicationDescriptor(updatedApplicationDescriptorFile, applicationDescriptor);
             
         } else {
@@ -586,6 +597,9 @@ public class AssessUsage {
                 appDescUtils.appendFileDefinition(applicationDescriptor, sourceGroupName, language,
                     languageProcessor, artifactsType, fileExtension, repositoryPath, file, type, "service submodule");
                 logger.logMessage("\t==> Updating usage of Program '" + file + "' to 'service submodule'.");
+                
+                // Update the target Application Descriptor to add Dependency
+                updateConsumerApplicationDescriptor(referencingApp, "artifactrepository", applicationDescriptor);
             }
             appDescUtils.writeApplicationDescriptor(updatedApplicationDescriptorFile, applicationDescriptor);
             
@@ -594,6 +608,14 @@ public class AssessUsage {
             appDescUtils.appendFileDefinition(applicationDescriptor, sourceGroupName, language,
                 languageProcessor, artifactsType, fileExtension, repositoryPath, file, type, "service submodule");
             logger.logMessage("\t==> Updating usage of Program '" + file + "' to 'service submodule'.");
+            
+            // Update consumers for programs referenced by multiple applications
+            for (String consumerCollection : referencingCollections) {
+                if (!consumerCollection.equals(props.getProperty("application"))) {
+                    updateConsumerApplicationDescriptor(consumerCollection, "artifactrepository", applicationDescriptor);
+                }
+            }
+            
             appDescUtils.writeApplicationDescriptor(updatedApplicationDescriptorFile, applicationDescriptor);
             
         } else {
@@ -719,6 +741,62 @@ public class AssessUsage {
             this.sortedList = sortedList;
             this.nestedDependencies = nestedDependencies;
         }
+    }
+    
+    /**
+     * Update the Application Descriptor of consuming application.
+     * Adds dependencies to consumer applications and consumers to provider applications.
+     */
+    private void updateConsumerApplicationDescriptor(String consumer, String dependencyType,
+                                                    ApplicationDescriptor providerApplicationDescriptor) throws Exception {
+        // Determine which YAML file to use
+        File consumerApplicationDescriptorFile = new File(props.getProperty("DBB_MODELER_APPLICATION_DIR") +
+            "/" + consumer + "/applicationDescriptor.yml");
+        
+        ApplicationDescriptor consumerApplicationDescriptor = null;
+        
+        if (consumerApplicationDescriptorFile.exists()) {
+            // Update the Application Descriptor that already exists in the Application repository
+            consumerApplicationDescriptor = appDescUtils.readApplicationDescriptor(consumerApplicationDescriptorFile);
+        } else {
+            // Start from the original Application Descriptor created by the extraction phase
+            File originalConsumerApplicationDescriptorFile = new File(props.getProperty("DBB_MODELER_APPCONFIG_DIR") +
+                "/" + consumer + ".yml");
+            
+            if (originalConsumerApplicationDescriptorFile.exists()) {
+                FileUtility.copyFileWithTags(originalConsumerApplicationDescriptorFile, consumerApplicationDescriptorFile);
+                consumerApplicationDescriptor = appDescUtils.readApplicationDescriptor(consumerApplicationDescriptorFile);
+            } else {
+                logger.logMessage("*! [WARNING] Application Descriptor file '" +
+                    originalConsumerApplicationDescriptorFile.getPath() +
+                    "' was not found. Skipping the configuration update for Application '" + consumer + "'.");
+            }
+        }
+        
+        // Consumer's Application Descriptor file has been found and can be updated
+        if (consumerApplicationDescriptor != null) {
+            // Fetch the internal baseline that is added
+            ApplicationDescriptor.Baseline providerInternalBaseline = null;
+            if (providerApplicationDescriptor.getBaselines() != null) {
+                for (ApplicationDescriptor.Baseline baseline : providerApplicationDescriptor.getBaselines()) {
+                    if (baseline.getBranch().equals(props.getProperty("APPLICATION_DEFAULT_BRANCH"))) {
+                        providerInternalBaseline = baseline;
+                        break;
+                    }
+                }
+            }
+            
+            if (providerInternalBaseline != null) {
+                appDescUtils.addApplicationDependency(consumerApplicationDescriptor,
+                    providerApplicationDescriptor.getApplication(),
+                    providerInternalBaseline.getReference(),
+                    providerInternalBaseline.getBuildid());
+                appDescUtils.writeApplicationDescriptor(consumerApplicationDescriptorFile, consumerApplicationDescriptor);
+            }
+        }
+        
+        // Update provider's Application Descriptor
+        appDescUtils.addApplicationConsumer(providerApplicationDescriptor, consumer);
     }
 }
 
