@@ -160,13 +160,14 @@ public class GenerateZBuilderProperties {
                         options.setPrettyFlow(true);
                         Yaml yamlWriter = new Yaml(options);
                         
-                        try (FileWriter writer = new FileWriter(typeConfigYamlFile)) {
+                        try (OutputStreamWriter writer = new OutputStreamWriter(
+                                new FileOutputStream(typeConfigYamlFile), "UTF-8")) {
                             yamlWriter.dump(yamlContent, writer);
                         }
                         
                         // Set file tag for z/OS
                         try {
-                            Runtime.getRuntime().exec("chtag -tc UTF-8 " + typeConfigYamlFile.getAbsolutePath()).waitFor();
+                            com.ibm.dbb.utils.FileUtils.setFileTag(typeConfigYamlFile.getAbsolutePath(), "UTF-8");
                         } catch (Exception e) {
                             // Ignore on non-z/OS systems
                         }
@@ -257,13 +258,14 @@ public class GenerateZBuilderProperties {
             yamlFileParentFolder.mkdirs();
         }
         
-        try (FileWriter writer = new FileWriter(applicationDBBAppYamlFile)) {
+        try (OutputStreamWriter writer = new OutputStreamWriter(
+                new FileOutputStream(applicationDBBAppYamlFile), "UTF-8")) {
             yamlWriter.dump(rootYaml, writer);
         }
         
         // Set file tag for z/OS
         try {
-            Runtime.getRuntime().exec("chtag -tc UTF-8 " + applicationDBBAppYamlFile.getAbsolutePath()).waitFor();
+            com.ibm.dbb.utils.FileUtils.setFileTag(applicationDBBAppYamlFile.getAbsolutePath(), "UTF-8");
         } catch (Exception e) {
             // Ignore on non-z/OS systems
         }

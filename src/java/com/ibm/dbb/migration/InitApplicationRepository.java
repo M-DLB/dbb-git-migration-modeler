@@ -436,6 +436,8 @@ public class InitApplicationRepository {
             writer.println("    </natures>");
             writer.println("</projectDescription>");
         }
+        com.ibm.dbb.utils.FileUtils.setFileTag(projectFile.getAbsolutePath(), "UTF-8");
+
     }
     
     private void preparePipelineConfiguration(File appRepoDir, String appName, String logFile) throws IOException {
