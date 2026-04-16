@@ -15,7 +15,6 @@ import org.apache.commons.cli.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Initializes Git repositories for migrated applications.
@@ -73,6 +72,11 @@ public class InitApplicationRepositories {
         
         if (cmd.hasOption("a")) {
             applicationFilter = cmd.getOptionValue("a");
+        } else {
+            logger.logMessage("[ERROR] Application name option (-a) is required.");
+            formatter.printHelp("InitApplicationRepositories [options]", options);
+            System.exit(2);
+            return;
         }
         
         if (cmd.hasOption("l")) {
@@ -113,10 +117,11 @@ public class InitApplicationRepositories {
             .build());
             
         options.addOption(Option.builder("a")
-            .longOpt("applications")
+            .longOpt("application")
             .hasArg()
-            .argName("appList")
-            .desc("Comma-separated list of applications to initialize (optional, default: all)")
+            .argName("appName")
+            .desc("Application name to initialize (required)")
+            .required()
             .build());
             
         options.addOption(Option.builder("l")
@@ -163,152 +168,98 @@ public class InitApplicationRepositories {
             return;
         }
         
-        File appDirFile = new File(applicationDir);
-        if (!appDirFile.exists() || !appDirFile.isDirectory()) {
+        if (applicationFilter == null || applicationFilter.isEmpty()) {
             exitCode = 8;
-            logger.logMessage("[ERROR] Application directory does not exist: " + applicationDir + ". rc=" + exitCode);
+            logger.logMessage("[ERROR] Application name is required. rc=" + exitCode);
             return;
         }
         
-        // Get list of applications to process
-        Set<String> applicationsToProcess = getApplicationsToProcess(appDirFile);
+        String appName = applicationFilter.trim();
+        File appRepoDir = new File(applicationDir, appName);
         
-        if (applicationsToProcess.isEmpty()) {
-            logger.logMessage("[INFO] No applications found to initialize.");
+        if (!appRepoDir.exists() || !appRepoDir.isDirectory()) {
+            exitCode = 8;
+            logger.logMessage("[ERROR] Application directory does not exist: " + appRepoDir.getAbsolutePath() + ". rc=" + exitCode);
             return;
         }
         
-        // Process each application
-        for (String appName : applicationsToProcess) {
-            exitCode = 0; // Reset for each application
-            
-            logger.logMessage("*******************************************************************");
-            logger.logMessage("Initialize application's directory for application '" + appName + "'");
-            logger.logMessage("*******************************************************************");
-            
-            File appRepoDir = new File(applicationDir, appName);
-            String logFile = logsDir + File.separator + "5-" + appName + "-initApplicationRepository.log";
-            
-            // Create application-specific logger if processing multiple applications
-            Logger appLogger = logger;
-            if (applicationsToProcess.size() > 1) {
-                try {
-                    appLogger = new Logger();
-                    appLogger.create(logFile);
-                } catch (IOException e) {
-                    logger.logMessage("[ERROR] Failed to create log file for " + appName + ": " + e.getMessage());
-                    exitCode = 8;
-                    continue;
-                }
+        String logFile = logsDir + File.separator + "5-" + appName + "-initApplicationRepository.log";
+        
+        try {
+            // Check if already a Git repository
+            if (isGitRepository(appRepoDir)) {
+                logger.logMessage("*! [WARNING] '" + appRepoDir.getAbsolutePath() +
+                    "' is already a Git repository. Skip initialization for " + appName + ".");
+                return;
             }
             
-            try {
-                // Check if already a Git repository
-                if (isGitRepository(appRepoDir)) {
-                    appLogger.logMessage("*! [WARNING] '" + appRepoDir.getAbsolutePath() +
-                        "' is already a Git repository. Skip initialization for " + appName + ".");
-                    continue;
-                }
+            // Reset DBB Metadatastore buildGroup
+            String buildGroupName = appName + "-" + defaultBranch;
+            resetBuildGroup(buildGroupName, appName, logFile);
+            
+            if (exitCode != 0) return;
+            
+            // Initialize Git repository
+            initializeGitRepository(appRepoDir, defaultBranch, logFile);
+            
+            if (exitCode != 0) return;
+            
+            // Copy .gitattributes file
+            copyGitAttributes(appRepoDir, logFile);
+            
+            if (exitCode != 0) return;
+            
+            // Copy and customize ZAPP file
+            customizeZappFile(appRepoDir, appName, logFile);
+            
+            if (exitCode != 0) return;
+            
+            // Create baselineReference.config file
+            createBaselineReferenceConfig(appRepoDir, appName, defaultBranch);
+            
+            if (exitCode != 0) return;
+            
+            // Create IDZ project file
+            createIdzProjectFile(appRepoDir, appName);
+            
+            if (exitCode != 0) return;
+            
+            // Prepare pipeline configuration
+            preparePipelineConfiguration(appRepoDir, appName, logFile);
+            
+            if (exitCode != 0) return;
+            
+            // Git operations: status, add, commit
+            performGitOperations(appRepoDir, logFile);
+            
+            if (exitCode != 0) return;
+            
+            // Create tag and release branch
+            createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
+            
+            if (exitCode == 0) {
+                logger.logMessage("** Initializing Git repository for application '" + appName +
+                    "' completed successfully. rc=" + exitCode);
                 
-                // Reset DBB Metadatastore buildGroup
-                String buildGroupName = appName + "-" + defaultBranch;
-                resetBuildGroup(buildGroupName, appName, logFile);
+                // Run preview build
+                runPreviewBuild(appRepoDir, appName, logsDir, logFile);
                 
-                if (exitCode != 0) continue;
+                // Update metadata store owners (Db2 only)
+                updateMetadataStoreOwners(buildGroupName, appName, logFile);
                 
-                // Initialize Git repository
-                initializeGitRepository(appRepoDir, defaultBranch, logFile);
-                
-                if (exitCode != 0) continue;
-                
-                // Copy .gitattributes file
-                copyGitAttributes(appRepoDir, logFile);
-                
-                if (exitCode != 0) continue;
-                
-                // Copy and customize ZAPP file
-                customizeZappFile(appRepoDir, appName, logFile);
-                
-                if (exitCode != 0) continue;
-                
-                // Create baselineReference.config file
-                createBaselineReferenceConfig(appRepoDir, appName, defaultBranch);
-                
-                if (exitCode != 0) continue;
-                
-                // Create IDZ project file
-                createIdzProjectFile(appRepoDir, appName);
-                
-                if (exitCode != 0) continue;
-                
-                // Prepare pipeline configuration
-                preparePipelineConfiguration(appRepoDir, appName, logFile);
-                
-                if (exitCode != 0) continue;
-                
-                // Git operations: status, add, commit
-                performGitOperations(appRepoDir, logFile);
-                
-                if (exitCode != 0) continue;
-                
-                // Create tag and release branch
-                createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
-                
-                if (exitCode == 0) {
-                    appLogger.logMessage("** Initializing Git repository for application '" + appName +
-                        "' completed successfully. rc=" + exitCode);
-                    
-                    // Run preview build
-                    runPreviewBuild(appRepoDir, appName, logsDir, logFile);
-                    
-                    // Update metadata store owners (Db2 only)
-                    updateMetadataStoreOwners(buildGroupName, appName, logFile);
-                    
-                    // Publish artifacts if enabled
-                    publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
-                } else {
-                    appLogger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
-                        "' failed. rc=" + exitCode);
-                }
-                
-            } catch (Exception e) {
-                exitCode = 8;
-                appLogger.logMessage("*! [ERROR] Failed to initialize repository for '" + appName + "': " +
-                    e.getMessage() + ". rc=" + exitCode);
-                e.printStackTrace();
-            } finally {
-                // Close application-specific logger if it was created
-                if (appLogger != logger) {
-                    appLogger.close();
-                }
+                // Publish artifacts if enabled
+                publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
+            } else {
+                logger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
+                    "' failed. rc=" + exitCode);
             }
+            
+        } catch (Exception e) {
+            exitCode = 8;
+            logger.logMessage("*! [ERROR] Failed to initialize repository for '" + appName + "': " +
+                e.getMessage() + ". rc=" + exitCode);
+            e.printStackTrace();
         }
-    }
-    
-    private Set<String> getApplicationsToProcess(File appDirFile) {
-        Set<String> applications = new LinkedHashSet<>();
-        
-        // Get all directories except dbb-zappbuild
-        File[] dirs = appDirFile.listFiles(File::isDirectory);
-        if (dirs != null) {
-            for (File dir : dirs) {
-                String dirName = dir.getName();
-                if (!dirName.equals("dbb-zappbuild")) {
-                    applications.add(dirName);
-                }
-            }
-        }
-        
-        // Filter by application list if provided
-        if (applicationFilter != null && !applicationFilter.isEmpty()) {
-            Set<String> filterSet = Arrays.stream(applicationFilter.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
-            applications.retainAll(filterSet);
-        }
-        
-        return applications;
     }
     
     private boolean isGitRepository(File directory) {

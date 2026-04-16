@@ -100,16 +100,35 @@ if [ $rc -eq 0 ]; then
 fi
 
 if [ $rc -eq 0 ]; then
-	# Build command with optional application filter
-	if [ -n "$APPLICATION_FILTER" ]; then
-		CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.InitApplicationRepositories -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$APPLICATION_FILTER\""
-	else
-		CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.InitApplicationRepositories -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\""
-	fi
+	# Load required configuration properties
+	DBB_MODELER_APPLICATION_DIR=$(grep "^DBB_MODELER_APPLICATION_DIR=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
+	DBB_MODELER_LOGS=$(grep "^DBB_MODELER_LOGS=" "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" | cut -d'=' -f2)
 	
-	echo "[INFO] ${CMD}"
-	eval $CMD
-	rc=$?
+	# Adding commas before and after the passed parm, to search for pattern including commas
+	APPLICATION_FILTER=",${APPLICATION_FILTER},"
+
+	cd $DBB_MODELER_APPLICATION_DIR
+	for applicationDir in $(ls | grep -v dbb-zappbuild)
+	do
+		# reset return code
+		rc=0
+		# If no parm specified or if the specified list of applications contains the current application
+		if [ "$APPLICATION_FILTER" == ",," ] || [[ ${APPLICATION_FILTER} == *",${applicationDir},"* ]]; then
+			echo "*******************************************************************"
+			echo "Initialize application's directory for application '$applicationDir'"
+			echo "*******************************************************************"
+			
+			CMD="java -cp \"$CLASSPATH\" com.ibm.dbb.migration.InitApplicationRepositories -c \"$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE\" -a \"$applicationDir\" -l \"$DBB_MODELER_LOGS/5-$applicationDir-initApplicationRepository.log\""
+			echo "[INFO] ${CMD}" >> $DBB_MODELER_LOGS/5-$applicationDir-initApplicationRepository.log
+			eval $CMD
+			rc=$?
+			
+			if [ $rc -ne 0 ]; then
+				echo "[ERROR] Initialize repository failed for application '$applicationDir'. rc=$rc"
+				break
+			fi
+		fi
+	done
 fi
 
 exit $rc
