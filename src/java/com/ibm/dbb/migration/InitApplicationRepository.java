@@ -367,7 +367,8 @@ public class InitApplicationRepository {
                 return;
             }
             
-            ApplicationDescriptor appDescriptor = ApplicationDescriptorUtils.readApplicationDescriptor(appDescriptorFile);
+            ApplicationDescriptorUtils appDescUtils = new ApplicationDescriptorUtils();
+            ApplicationDescriptor appDescriptor = appDescUtils.readApplicationDescriptor(appDescriptorFile);
             
             // Customize ZAPP file
             ZappUtility.customizeZappFile(targetFile, appDescriptor);
