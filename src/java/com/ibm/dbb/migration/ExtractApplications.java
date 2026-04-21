@@ -547,8 +547,12 @@ public class ExtractApplications {
             }
         }
         
-        Process process = Runtime.getRuntime().exec("chtag -tc IBM-1047 " + mappingFile.getAbsolutePath());
-        process.waitFor();
+        // Set file tag to IBM-1047 (z/OS specific)
+        try {
+            com.ibm.dbb.utils.FileUtils.setFileTag(mappingFile.getAbsolutePath(), "IBM-1047");
+        } catch (Exception e) {
+            // Ignore file tagging errors on non-z/OS systems
+        }
         
         logger.logMessage("\tCreated DBB Migration Utility mapping file " + mappingFile.getAbsolutePath());
         

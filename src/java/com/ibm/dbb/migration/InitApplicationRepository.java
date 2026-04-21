@@ -409,10 +409,9 @@ public class InitApplicationRepository {
         
         // Set encoding tag (z/OS specific)
         try {
-            executeCommand(Arrays.asList("chtag", "-c", "ibm-1047", "-t", baselineFile.getAbsolutePath()), 
-                null, null);
+            com.ibm.dbb.utils.FileUtils.setFileTag(baselineFile.getAbsolutePath(), "IBM-1047");
         } catch (Exception e) {
-            // Ignore chtag errors on non-z/OS systems
+            // Ignore file tagging errors on non-z/OS systems
         }
     }
     
