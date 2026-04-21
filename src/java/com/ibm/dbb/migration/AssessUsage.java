@@ -891,7 +891,7 @@ public class AssessUsage {
             " to new buildgroup " + owningApplication + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH") + ".");
         
         metadataStoreUtils.moveLogicalFile(
-            props.getProperty("DBB_MODELER_APPLICATION_DIR"),
+            props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + owningApplication,
             sourceFilePath,
             props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"),
             props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"),
