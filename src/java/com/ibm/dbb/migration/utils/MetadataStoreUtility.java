@@ -144,6 +144,145 @@ public class MetadataStoreUtility {
     public MetadataStore getMetadataStore() {
         return metadataStore;
     }
+    
+    /**
+     * Move a logical file from one build group/collection to another.
+     * This replicates the Groovy behavior:
+     * 1. Delete the logical file from the source collection
+     * 2. Rescan the file at the target location (captures all dependencies automatically)
+     * 3. Add the rescanned logical file to the target collection
+     *
+     * @param applicationDir Base application directory
+     * @param sourceFilePath Source file path (relative to application)
+     * @param sourceBuildGroup Source build group name
+     * @param sourceCollection Source collection name
+     * @param targetFilePath Target file path (relative to application)
+     * @param targetBuildGroup Target build group name
+     * @param targetCollection Target collection name
+     * @throws BuildException if the move operation fails
+     */
+    public void moveLogicalFile(String applicationDir, String sourceFilePath,
+                               String sourceBuildGroup, String sourceCollection,
+                               String targetFilePath, String targetBuildGroup,
+                               String targetCollection) throws BuildException {
+        if (metadataStore == null) {
+            throw new IllegalStateException("MetadataStore not initialized");
+        }
+        
+        // Step 1: Delete logical file from source collection
+        boolean deleteSuccessful = deleteLogicalFile(applicationDir + "/" + sourceFilePath,
+            sourceBuildGroup, sourceCollection);
+        
+        if (!deleteSuccessful) {
+            // If deletion failed, the file might not exist in source - continue anyway
+            return;
+        }
+        
+        // Step 2: Scan the file at the target location (this captures all dependencies)
+        LogicalFile scannedLogicalFile = scanFile(applicationDir, targetFilePath);
+        
+        if (scannedLogicalFile == null) {
+            throw new BuildException("Failed to scan file at target location: " + targetFilePath);
+        }
+        
+        // Step 3: Add the scanned logical file to the target build group/collection
+        addLogicalFile(scannedLogicalFile, targetBuildGroup, targetCollection);
+    }
+    
+    /**
+     * Delete a logical file from a collection.
+     *
+     * @param file Full file path
+     * @param buildGroupName Build group name
+     * @param collectionName Collection name
+     * @return true if deletion was successful, false otherwise
+     * @throws BuildException if operation fails
+     */
+    private boolean deleteLogicalFile(String file, String buildGroupName, String collectionName)
+            throws BuildException {
+        BuildGroup buildGroup = metadataStore.getBuildGroup(buildGroupName);
+        if (buildGroup == null) {
+            return false;
+        }
+        
+        com.ibm.dbb.metadata.Collection collection = buildGroup.getCollection(collectionName);
+        if (collection == null) {
+            return false;
+        }
+        
+        LogicalFile logicalFile = collection.getLogicalFile(file);
+        if (logicalFile != null) {
+            collection.deleteLogicalFile(file);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Scan a file to create a LogicalFile with all dependencies.
+     *
+     * @param workspace Workspace directory
+     * @param file File path relative to workspace
+     * @return Scanned LogicalFile or null if scan fails
+     */
+    private LogicalFile scanFile(String workspace, String file) {
+        LogicalFile logicalFile = null;
+        com.ibm.dbb.dependency.DependencyScanner scanner = new com.ibm.dbb.dependency.DependencyScanner();
+        
+        // Enable Control Transfer flag in DBB Scanner
+        scanner.setCollectControlTransfers("true");
+        
+        try {
+            logicalFile = scanner.scan(file, workspace);
+        } catch (Exception e) {
+            // Scan failed - return null
+            logicalFile = null;
+        }
+        
+        return logicalFile;
+    }
+    
+    /**
+     * Add a logical file to a target collection.
+     *
+     * @param logicalFile The logical file to add
+     * @param buildGroupName Target build group name
+     * @param collectionName Target collection name
+     * @return true if addition was successful
+     * @throws BuildException if operation fails
+     */
+    private boolean addLogicalFile(LogicalFile logicalFile, String buildGroupName,
+                                   String collectionName) throws BuildException {
+        // Ensure target build group exists
+        BuildGroup buildGroup;
+        if (!metadataStore.buildGroupExists(buildGroupName)) {
+            buildGroup = metadataStore.createBuildGroup(buildGroupName);
+        } else {
+            buildGroup = metadataStore.getBuildGroup(buildGroupName);
+        }
+        
+        if (buildGroup == null) {
+            return false;
+        }
+        
+        // Ensure target collection exists
+        com.ibm.dbb.metadata.Collection collection;
+        if (!buildGroup.collectionExists(collectionName)) {
+            collection = buildGroup.createCollection(collectionName);
+        } else {
+            collection = buildGroup.getCollection(collectionName);
+        }
+        
+        if (collection == null) {
+            return false;
+        }
+        
+        // Add the logical file to the collection
+        collection.addLogicalFile(logicalFile);
+        
+        return true;
+    }
 }
 
 // Made with Bob

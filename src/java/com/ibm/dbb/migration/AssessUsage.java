@@ -484,8 +484,8 @@ public class AssessUsage {
             } else {
                 // File belongs to another application
                 if (Boolean.parseBoolean(props.getProperty("MOVE_FILES_FLAG"))) {
-                    // Move file logic would go here - complex operation
-                    logger.logMessage("\t==> File movement to '" + referencingApp + "' would be performed here.");
+                    // Perform actual file movement
+                    moveFileToOwningApplication(file, properties, referencingApp);
                 } else {
                     String usageLabel = props.getProperty("application").equals("UNASSIGNED") ? "shared" : "public";
                     logger.logMessage("\t==> Updating usage of Include File '" + file + "' to '" + usageLabel + "'.");
@@ -797,6 +797,266 @@ public class AssessUsage {
         
         // Update provider's Application Descriptor
         appDescUtils.addApplicationConsumer(providerApplicationDescriptor, consumer);
+    }
+    
+    /**
+     * Move a file from the current application to the owning application.
+     * This includes:
+     * - Updating target application descriptor
+     * - Moving the physical file
+     * - Updating source application descriptor
+     * - Moving DBB metadata
+     * - Updating mapping files
+     */
+    private void moveFileToOwningApplication(String file, Map<String, String> properties,
+                                            String owningApplication) throws Exception {
+        String sourceGroupName = properties.get("sourceGroupName");
+        String language = properties.get("language");
+        String languageProcessor = properties.get("languageProcessor");
+        String artifactsType = properties.get("artifactsType");
+        String fileExtension = properties.get("fileExtension");
+        String repositoryPath = properties.get("repositoryPath");
+        String type = properties.get("type");
+        String qualifiedFile = repositoryPath + "/" + file + "." + fileExtension;
+        
+        // Load target application descriptor
+        File originalTargetAppDescFile = new File(props.getProperty("DBB_MODELER_APPCONFIG_DIR") +
+            "/" + owningApplication + ".yml");
+        File updatedTargetAppDescFile = new File(props.getProperty("DBB_MODELER_APPLICATION_DIR") +
+            "/" + owningApplication + "/applicationDescriptor.yml");
+        
+        ApplicationDescriptor targetApplicationDescriptor = null;
+        
+        if (updatedTargetAppDescFile.exists()) {
+            targetApplicationDescriptor = appDescUtils.readApplicationDescriptor(updatedTargetAppDescFile);
+        } else if (originalTargetAppDescFile.exists()) {
+            FileUtility.copyFileWithTags(originalTargetAppDescFile, updatedTargetAppDescFile);
+            targetApplicationDescriptor = appDescUtils.readApplicationDescriptor(updatedTargetAppDescFile);
+        } else {
+            logger.logMessage("*! [WARNING] Application Descriptor file '" +
+                originalTargetAppDescFile.getPath() + "' was not found. Skipping the configuration update for Include File '" +
+                file + "'.");
+            return;
+        }
+        
+        // Detect current sourceGroupName
+        String currentSourceGroup;
+        String[] sourceGroupParts = sourceGroupName.split(":");
+        if (sourceGroupParts.length == 2) {
+            currentSourceGroup = sourceGroupParts[1];
+        } else {
+            currentSourceGroup = sourceGroupName;
+        }
+        
+        // Detect target component name from referencing programs/elements
+        String targetApplicationComponent = detectTargetComponent(owningApplication, qualifiedFile, targetApplicationDescriptor);
+        
+        // Define target source group name
+        String targetSourceGroupName = (targetApplicationComponent != null && !targetApplicationComponent.isEmpty())
+            ? targetApplicationComponent + ":" + currentSourceGroup
+            : currentSourceGroup;
+        
+        // Compute target repository path
+        String targetRepositoryPath = computeTargetRepositoryPath(sourceGroupName, owningApplication, targetApplicationComponent);
+        
+        logger.logMessage("\t==> Moving Include File '" + file + "' to '" + targetRepositoryPath +
+            "' in Application '" + owningApplication + "'.");
+        
+        // Copy file to target application folder
+        copyFileToApplicationFolder(props.getProperty("application") + "/" + qualifiedFile,
+            owningApplication + "/" + targetRepositoryPath);
+        
+        // Add file to target application descriptor
+        appDescUtils.appendFileDefinition(targetApplicationDescriptor, targetSourceGroupName, language,
+            languageProcessor, artifactsType, fileExtension, targetRepositoryPath, file, type, "private");
+        logger.logMessage("\t==> Adding Include File '" + file + "' with usage 'private' to Application '" +
+            owningApplication + "' described in '" + updatedTargetAppDescFile.getPath() + "'.");
+        appDescUtils.writeApplicationDescriptor(updatedTargetAppDescFile, targetApplicationDescriptor);
+        
+        // Remove file from source application descriptor
+        logger.logMessage("\t==> Removing Include File '" + file + "' from Application '" +
+            props.getProperty("application") + "' described in '" + updatedApplicationDescriptorFile.getPath() + "'.");
+        appDescUtils.removeFileDefinition(applicationDescriptor, sourceGroupName, file);
+        
+        // Move logical file in DBB Metadatastore
+        String sourceFilePath = qualifiedFile;
+        String targetFilePath = targetRepositoryPath + "/" + file + "." + fileExtension;
+        
+        // Update application mappings
+        updateMappingFiles(props.getProperty("DBB_MODELER_APPCONFIG_DIR"),
+            props.getProperty("application"), sourceFilePath, owningApplication, targetFilePath);
+        
+        logger.logMessage("\t==> Moving DBB Metadata for '" + file + "' from buildGroup " +
+            props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH") +
+            " to new buildgroup " + owningApplication + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH") + ".");
+        
+        metadataStoreUtils.moveLogicalFile(
+            props.getProperty("DBB_MODELER_APPLICATION_DIR"),
+            sourceFilePath,
+            props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"),
+            props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"),
+            targetFilePath,
+            owningApplication + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH"),
+            owningApplication + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH")
+        );
+    }
+    
+    /**
+     * Detect the target component based on referencing files in the target application.
+     */
+    private String detectTargetComponent(String owningApplication, String qualifiedFile,
+                                        ApplicationDescriptor targetApplicationDescriptor) throws Exception {
+        // Find impacted files to determine component
+        Map<String, String> properties = new HashMap<>();
+        String impactSearchRule = String.format(
+            "search:[:COPY,SQL INCLUDE:]%s/?path=%s/**;**/**",
+            props.getProperty("DBB_MODELER_APPLICATION_DIR"),
+            owningApplication
+        );
+        
+        Map<ImpactFile, String> impactedFiles = findImpactedFilesWithBuildGroup(
+            impactSearchRule,
+            props.getProperty("application") + "/" + qualifiedFile
+        );
+        
+        Set<ApplicationDescriptor.Source> referencingSourceGroups = new HashSet<>();
+        for (ImpactFile impactedFile : impactedFiles.keySet()) {
+            if (targetApplicationDescriptor.getSources() != null) {
+                for (ApplicationDescriptor.Source source : targetApplicationDescriptor.getSources()) {
+                    if (impactedFile.getFile().contains(source.getRepositoryPath())) {
+                        referencingSourceGroups.add(source);
+                    }
+                }
+            }
+        }
+        
+        if (referencingSourceGroups.size() == 1) {
+            // Single source group referencing it
+            ApplicationDescriptor.Source sourceGroup = referencingSourceGroups.iterator().next();
+            String tmpSourceGroupName = sourceGroup.getName();
+            String[] sourceGroupIdentifier = tmpSourceGroupName.split(":");
+            
+            if (sourceGroupIdentifier.length == 1) {
+                return ""; // No component identified
+            } else if (sourceGroupIdentifier.length == 2) {
+                return sourceGroupIdentifier[0]; // Component identified
+            }
+        } else if (referencingSourceGroups.size() > 1) {
+            // Multiple components identified
+            return "COMMON";
+        }
+        
+        return "";
+    }
+    
+    /**
+     * Compute the target repository path based on repository path mapping configuration.
+     */
+    private String computeTargetRepositoryPath(String sourceGroupName, String owningApplication,
+                                              String targetApplicationComponent) {
+        // Find repository configuration for the source group
+        RepositoryPathsMapping.RepositoryPath repoPathConfig = null;
+        if (repositoryPathsMapping != null && repositoryPathsMapping.getRepositoryPaths() != null) {
+            for (RepositoryPathsMapping.RepositoryPath repoMapping : repositoryPathsMapping.getRepositoryPaths()) {
+                if (repoMapping.getSourceGroup().equals(sourceGroupName)) {
+                    repoPathConfig = repoMapping;
+                    break;
+                }
+            }
+        }
+        
+        if (repoPathConfig != null) {
+            // Expand application component variables
+            String targetPath = repoPathConfig.getRepositoryPath()
+                .replaceAll("\\$application", owningApplication)
+                .replaceAll("\\$component", targetApplicationComponent != null ? targetApplicationComponent : "")
+                .replaceAll("//", "/");
+            return targetPath;
+        }
+        
+        return sourceGroupName; // Fallback to source group name
+    }
+    
+    /**
+     * Copy a file from source to target application folder.
+     * Moves the file using Java NIO Files.move().
+     */
+    private void copyFileToApplicationFolder(String sourceFile, String targetRepositoryPath) throws IOException {
+        Path source = Paths.get(props.getProperty("DBB_MODELER_APPLICATION_DIR"), sourceFile);
+        String fileName = source.getFileName().toString();
+        Path target = Paths.get(props.getProperty("DBB_MODELER_APPLICATION_DIR"),
+            targetRepositoryPath, fileName);
+        Path targetDir = target.getParent();
+        
+        // Create target directory if it doesn't exist
+        File targetDirFile = targetDir.toFile();
+        if (!targetDirFile.exists()) {
+            targetDirFile.mkdirs();
+        }
+        
+        // Move file if source exists and paths are different
+        if (source.toFile().exists() && !source.toString().equals(target.toString())) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+    
+    /**
+     * Update migration mapping files when a file is moved between applications.
+     * Updates both source and target application mapping files.
+     */
+    private void updateMappingFiles(String configurationsDirectory, String sourceApplication,
+                                   String oldFileLocation, String targetApplication,
+                                   String targetRepositoryPath) {
+        File sourceApplicationMappingFile = new File(configurationsDirectory + "/" + sourceApplication + ".mapping");
+        File targetApplicationMappingFile = new File(configurationsDirectory + "/" + targetApplication + ".mapping");
+        
+        if (!sourceApplicationMappingFile.exists()) {
+            logger.logMessage("*! [ERROR] Couldn't find the mapping file '" + sourceApplication + ".mapping'");
+            return;
+        }
+        
+        if (!targetApplicationMappingFile.exists()) {
+            logger.logMessage("*! [ERROR] Couldn't find the mapping file '" + targetApplication + ".mapping'");
+            return;
+        }
+        
+        try {
+            File newSourceApplicationMappingFile = new File(configurationsDirectory + "/" +
+                sourceApplication + ".mapping.new");
+            newSourceApplicationMappingFile.createNewFile();
+            
+            try (BufferedReader sourceReader = new BufferedReader(new FileReader(sourceApplicationMappingFile));
+                 BufferedWriter targetWriter = new BufferedWriter(new FileWriter(targetApplicationMappingFile, true));
+                 BufferedWriter newSourceWriter = new BufferedWriter(new FileWriter(newSourceApplicationMappingFile))) {
+                
+                String line;
+                while ((line = sourceReader.readLine()) != null) {
+                    String[] lineSegments = line.split(" ");
+                    String fullOldPath = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + oldFileLocation;
+                    
+                    if (lineSegments.length > 1 && lineSegments[1].equals(fullOldPath)) {
+                        // Update path and write to target mapping file
+                        lineSegments[1] = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + targetRepositoryPath;
+                        String updatedLine = String.join(" ", lineSegments);
+                        targetWriter.write(updatedLine + "\n");
+                    } else {
+                        // Keep in source mapping file
+                        newSourceWriter.write(line + "\n");
+                    }
+                }
+            }
+            
+            // Replace old source mapping file with new one
+            sourceApplicationMappingFile.delete();
+            Files.move(newSourceApplicationMappingFile.toPath(), sourceApplicationMappingFile.toPath());
+            
+            logger.logMessage("\t==> Updating Migration Mapping files for Applications '" +
+                sourceApplication + "' and '" + targetApplication + "' for file '" + oldFileLocation + "'.");
+                
+        } catch (IOException e) {
+            logger.logMessage("*! [ERROR] Failed to update mapping files: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
 
