@@ -165,6 +165,10 @@ if [ $rc -eq 0 ]; then
             rm -rf $DBB_MODELER_BUILD_CONFIGURATION
             echo "[INFO] Removed '${DBB_MODELER_BUILD_CONFIGURATION}' folder"
         fi
+        if [ -d $DBB_MODELER_FILE_METADATA_STORE_DIR ]; then
+            rm -rf $DBB_MODELER_FILE_METADATA_STORE_DIR
+            echo "[INFO] Removed '${DBB_MODELER_FILE_METADATA_STORE_DIR}' folder"
+        fi
 	fi
 fi
 
