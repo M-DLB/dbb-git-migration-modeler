@@ -349,10 +349,4 @@ public class ScanApplication {
                 db2ConnectionProps);
         }
     }
-    
-    /**
-     * Utility class for metadata store operations
-     */
 }
-
-// Made with Bob

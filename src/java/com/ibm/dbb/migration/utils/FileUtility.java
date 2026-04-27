@@ -28,7 +28,7 @@ public class FileUtility {
      * @param applicationDirectory Root directory of the application
      * @param descriptor Application descriptor containing source definitions
      * @param logger Logger for messages (can be null)
-     * @return Set of absolute file paths
+     * @return Set of relative file paths (relative to applicationDirectory)
      * @throws IOException if file system operations fail
      */
     public Set<String> getMappedFilesFromApplicationDescriptor(String applicationDirectory,
@@ -56,7 +56,8 @@ public class FileUtility {
                         .anyMatch(source -> source.getRepositoryPath().equals(relativeDirectory));
                     
                     if (matched) {
-                        files.add(filePath.toString());
+                        // Add relative path instead of absolute path (matching Groovy behavior)
+                        files.add(relativeFilePath);
                     } else {
                         if (logger != null) {
                             logger.logSilentMessage("[INFO] No matching Repository Path was found for file '" +
