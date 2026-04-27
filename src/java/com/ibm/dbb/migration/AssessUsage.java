@@ -16,6 +16,7 @@ import com.ibm.dbb.metadata.*;
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.migration.model.RepositoryPathsMapping;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.utils.ConfigurationUtility;
 import com.ibm.dbb.migration.utils.FileUtility;
 import com.ibm.dbb.migration.utils.Logger;
 import com.ibm.dbb.migration.utils.MetadataStoreUtility;
@@ -183,20 +184,22 @@ public class AssessUsage {
     
     private void validateAndLoadConfiguration(Properties config) {
         // Validate and load DBB_MODELER_APPCONFIG_DIR
-        String appConfigDir = config.getProperty("DBB_MODELER_APPCONFIG_DIR");
-        if (appConfigDir == null || !new File(appConfigDir).exists()) {
-            logger.logMessage("*! [ERROR] The Configurations directory must be specified and exist. Exiting.");
+        try {
+            ConfigurationUtility.loadRequiredProperty(config, props,
+                "DBB_MODELER_APPCONFIG_DIR", "The Configurations directory");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("DBB_MODELER_APPCONFIG_DIR", appConfigDir);
         
         // Validate and load DBB_MODELER_APPLICATION_DIR
-        String appDir = config.getProperty("DBB_MODELER_APPLICATION_DIR");
-        if (appDir == null || !new File(appDir).exists()) {
-            logger.logMessage("*! [ERROR] The Applications directory must be specified and exist. Exiting.");
+        try {
+            ConfigurationUtility.loadRequiredProperty(config, props,
+                "DBB_MODELER_APPLICATION_DIR", "The Applications directory");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("DBB_MODELER_APPLICATION_DIR", appDir);
         
         // Validate metadata store type
         String metadataStoreType = config.getProperty("DBB_MODELER_METADATASTORE_TYPE");
@@ -222,34 +225,47 @@ public class AssessUsage {
         }
         
         // Validate REPOSITORY_PATH_MAPPING_FILE
-        String repoPathMappingFile = config.getProperty("REPOSITORY_PATH_MAPPING_FILE");
-        if (repoPathMappingFile == null) {
-            logger.logMessage("*! [ERROR] The reference to the REPOSITORY_PATH_MAPPING_FILE must be specified. Exiting.");
+        try {
+            ConfigurationUtility.loadRequiredProperty(config, props,
+                "REPOSITORY_PATH_MAPPING_FILE", "The reference to the REPOSITORY_PATH_MAPPING_FILE");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("REPOSITORY_PATH_MAPPING_FILE", repoPathMappingFile);
         
         // Validate metadata store specific properties
         if (metadataStoreType.equals("file")) {
-            String fileMetadataStoreDir = config.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR");
-            if (fileMetadataStoreDir == null || !new File(fileMetadataStoreDir).exists()) {
-                logger.logMessage("*! [ERROR] The location for the File MetadataStore must be specified and exist. Exiting.");
+            try {
+                ConfigurationUtility.loadRequiredProperty(config, props,
+                    "DBB_MODELER_FILE_METADATA_STORE_DIR", "The location for the File MetadataStore");
+            } catch (IllegalArgumentException e) {
+                logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
                 System.exit(1);
             }
-            props.setProperty("DBB_MODELER_FILE_METADATA_STORE_DIR", fileMetadataStoreDir);
         } else if (metadataStoreType.equals("db2")) {
-            // Validate Db2 properties
+            // Validate Db2 JDBC ID (value only, no path check)
             String jdbcId = config.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID");
-            String configFile = config.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE");
-            String passwordFile = config.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE");
+            if (jdbcId == null || jdbcId.trim().isEmpty()) {
+                logger.logMessage("*! [ERROR] Db2 MetadataStore JDBC ID must be specified. Exiting.");
+                System.exit(1);
+            }
+            props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID", jdbcId);
             
-            if (jdbcId == null || configFile == null || !new File(configFile).exists() || passwordFile == null) {
-                logger.logMessage("*! [ERROR] Db2 MetadataStore configuration is incomplete. Exiting.");
+            // Validate Db2 config file (requires path check)
+            try {
+                ConfigurationUtility.loadRequiredProperty(config, props,
+                    "DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", "The Db2 Connection configuration file");
+            } catch (IllegalArgumentException e) {
+                logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
                 System.exit(1);
             }
             
-            props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID", jdbcId);
-            props.setProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", configFile);
+            // Validate Db2 password file (value only, no path check needed)
+            String passwordFile = config.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE");
+            if (passwordFile == null || passwordFile.trim().isEmpty()) {
+                logger.logMessage("*! [ERROR] Db2 MetadataStore password file must be specified. Exiting.");
+                System.exit(1);
+            }
             props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", passwordFile);
         }
         

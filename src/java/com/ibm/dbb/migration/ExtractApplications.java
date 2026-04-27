@@ -15,6 +15,7 @@ import com.ibm.dbb.migration.model.RepositoryPathsMapping;
 import com.ibm.dbb.migration.model.TypesMapping;
 import com.ibm.dbb.migration.utils.Logger;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.utils.ConfigurationUtility;
 import com.ibm.dmh.scan.classify.Dmh5210;
 import com.ibm.dmh.scan.classify.ScanProperties;
 import com.ibm.dmh.scan.classify.SingleFilesMetadata;
@@ -164,9 +165,6 @@ public class ExtractApplications {
             loadConfiguration(cmd.getOptionValue("c"));
         }
         
-        // Validate configuration
-        validateConfiguration();
-        
         // Log configuration
         logger.logMessage("** Script configuration:");
         for (Object key : props.keySet()) {
@@ -177,67 +175,37 @@ public class ExtractApplications {
     private void loadConfiguration(String configFilePath) throws Exception {
         props.setProperty("configurationFilePath", configFilePath);
         
-        // Validate and load configuration using ValidateConfiguration
-        logger.logMessage("** Validating configuration file...");
-        try {
-            Properties configuration = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
-            
-            // Copy all validated properties
-            for (String key : configuration.stringPropertyNames()) {
-                props.setProperty(key, configuration.getProperty(key));
-            }
-        } catch (Exception e) {
-            logger.logMessage("*! [ERROR] Configuration validation failed: " + e.getMessage());
-            throw e;
-        }
-    }
-
-    private void validateConfiguration() throws Exception {
-        validateDirectory("DBB_MODELER_APPCONFIG_DIR", "Configurations directory");
-        validateDirectory("DBB_MODELER_APPMAPPINGS_DIR", "Applications Mappings directory");
-        validateDirectory("DBB_MODELER_APPLICATION_DIR", "Applications directory");
-        validateFile("REPOSITORY_PATH_MAPPING_FILE", "Repository Paths Mapping file");
-        
-        if (props.getProperty("APPLICATION_TYPES_MAPPING") != null) {
-            validateFile("APPLICATION_TYPES_MAPPING", "Types Mapping file");
+        // Load configuration file directly (matching Groovy behavior)
+        Properties configuration = new Properties();
+        try (FileInputStream fis = new FileInputStream(configFilePath)) {
+            configuration.load(fis);
         }
         
-        if (props.getProperty("SCAN_DATASET_MEMBERS") == null) {
-            props.setProperty("SCAN_DATASET_MEMBERS", "false");
+        // Load only the properties used by extractApplications (matching Groovy script)
+        ConfigurationUtility.loadRequiredProperty(configuration, props, "DBB_MODELER_APPCONFIG_DIR", "Configurations directory");
+        ConfigurationUtility.loadRequiredProperty(configuration, props, "DBB_MODELER_APPMAPPINGS_DIR", "Applications Mappings directory");
+        ConfigurationUtility.loadRequiredProperty(configuration, props, "DBB_MODELER_APPLICATION_DIR", "Applications directory");
+        ConfigurationUtility.loadRequiredProperty(configuration, props, "REPOSITORY_PATH_MAPPING_FILE", "Repository Paths Mapping file");
+        
+        // Optional properties
+        ConfigurationUtility.loadOptionalProperty(configuration, props, "APPLICATION_TYPES_MAPPING");
+        
+        // SCAN_DATASET_MEMBERS with default
+        ConfigurationUtility.loadOptionalProperty(configuration, props, "SCAN_DATASET_MEMBERS", "false");
+        
+        // SCAN_DATASET_MEMBERS_ENCODING with conditional default
+        if (props.getProperty("SCAN_DATASET_MEMBERS") != null) {
+            ConfigurationUtility.loadOptionalProperty(configuration, props, "SCAN_DATASET_MEMBERS_ENCODING", "IBM-1047");
         }
         
-        if (props.getProperty("SCAN_DATASET_MEMBERS_ENCODING") == null) {
-            props.setProperty("SCAN_DATASET_MEMBERS_ENCODING", "IBM-1047");
-        }
-        
-        if (props.getProperty("APPLICATION_DEFAULT_BRANCH") == null) {
+        // APPLICATION_DEFAULT_BRANCH is required
+        String defaultBranch = configuration.getProperty("APPLICATION_DEFAULT_BRANCH");
+        if (defaultBranch == null || defaultBranch.trim().isEmpty()) {
             throw new IllegalArgumentException("APPLICATION_DEFAULT_BRANCH must be specified in configuration file");
         }
+        props.setProperty("APPLICATION_DEFAULT_BRANCH", defaultBranch);
     }
 
-    private void validateDirectory(String propertyName, String description) throws Exception {
-        String path = props.getProperty(propertyName);
-        if (path == null) {
-            throw new IllegalArgumentException(description + " must be specified in configuration file");
-        }
-        
-        File dir = new File(path);
-        if (!dir.exists() || !dir.isDirectory()) {
-            throw new FileNotFoundException(description + " does not exist: " + path);
-        }
-    }
-
-    private void validateFile(String propertyName, String description) throws Exception {
-        String path = props.getProperty(propertyName);
-        if (path == null) {
-            throw new IllegalArgumentException(description + " must be specified in configuration file");
-        }
-        
-        File file = new File(path);
-        if (!file.exists() || !file.isFile()) {
-            throw new FileNotFoundException(description + " does not exist: " + path);
-        }
-    }
 
     private void loadRepositoryPathsMapping() throws Exception {
         String mappingFile = props.getProperty("REPOSITORY_PATH_MAPPING_FILE");

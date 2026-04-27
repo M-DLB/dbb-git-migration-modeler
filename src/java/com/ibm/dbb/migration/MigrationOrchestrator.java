@@ -202,10 +202,8 @@ public class MigrationOrchestrator {
             deleteDirectory(config.getProperty("DBB_MODELER_BUILD_CONFIGURATION"));
 
             // Cleanup metadata store if file-based
-            System.out.println("*******" + config.getProperty("DBB_MODELER_METADATASTORE_TYPE"));
             if (config.getProperty("DBB_MODELER_METADATASTORE_TYPE").equalsIgnoreCase("file")) {
                 String metadataStoreDir = config.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR");
-                System.out.println("****** " + metadataStoreDir);
                 if (metadataStoreDir != null) {
                     deleteDirectory(metadataStoreDir);
                     Files.createDirectories(Paths.get(metadataStoreDir));

@@ -123,7 +123,6 @@ if [ $rc -eq 0 ]; then
 		CMD="${CMD} -a ${APPLICATION_FILTER}"
 	fi
 
-	echo "[INFO] ${CMD}"
 	eval $CMD
 	rc=$?
 fi

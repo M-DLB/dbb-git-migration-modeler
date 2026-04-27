@@ -18,6 +18,7 @@ import com.ibm.dbb.migration.utils.Logger;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
 import com.ibm.dbb.migration.utils.MetadataStoreUtility;
 import com.ibm.dbb.migration.utils.FileUtility;
+import com.ibm.dbb.migration.utils.ConfigurationUtility;
 import org.apache.commons.cli.*;
 
 import java.io.*;
@@ -215,19 +216,11 @@ public class ScanApplication {
         }
         
         // Validate repository path mapping file
-        if (configuration.getProperty("REPOSITORY_PATH_MAPPING_FILE") != null) {
-            File file = new File(configuration.getProperty("REPOSITORY_PATH_MAPPING_FILE"));
-            if (file.exists()) {
-                props.setProperty("REPOSITORY_PATH_MAPPING_FILE", 
-                    configuration.getProperty("REPOSITORY_PATH_MAPPING_FILE"));
-            } else {
-                logger.logMessage("*! [ERROR] The Repository Paths Mapping file '" + 
-                    configuration.getProperty("REPOSITORY_PATH_MAPPING_FILE") + "' does not exist. Exiting.");
-                System.exit(1);
-            }
-        } else {
-            logger.logMessage("*! [ERROR] The path to the Repository Paths Mapping file must be " +
-                "specified in the DBB Git Migration Modeler Configuration file. Exiting.");
+        try {
+            ConfigurationUtility.loadRequiredProperty(configuration, props,
+                "REPOSITORY_PATH_MAPPING_FILE", "The Repository Paths Mapping file");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
         
@@ -304,23 +297,23 @@ public class ScanApplication {
         }
         
         // Validate application default branch
-        if (configuration.getProperty("APPLICATION_DEFAULT_BRANCH") != null) {
-            props.setProperty("APPLICATION_DEFAULT_BRANCH", 
-                configuration.getProperty("APPLICATION_DEFAULT_BRANCH"));
-        } else {
+        String defaultBranch = configuration.getProperty("APPLICATION_DEFAULT_BRANCH");
+        if (defaultBranch == null || defaultBranch.trim().isEmpty()) {
             logger.logMessage("*! [ERROR] The Application Default Branch must be specified in the " +
                 "DBB Git Migration Modeler Configuration file. Exiting.");
             System.exit(1);
+        } else {
+            props.setProperty("APPLICATION_DEFAULT_BRANCH", defaultBranch);
         }
         
         // Validate scan control transfers
-        if (configuration.getProperty("SCAN_CONTROL_TRANSFERS") != null) {
-            props.setProperty("SCAN_CONTROL_TRANSFERS", 
-                configuration.getProperty("SCAN_CONTROL_TRANSFERS"));
-        } else {
+        String scanControlTransfers = configuration.getProperty("SCAN_CONTROL_TRANSFERS");
+        if (scanControlTransfers == null || scanControlTransfers.trim().isEmpty()) {
             logger.logMessage("*! [ERROR] The Scan Control Transfers parameter (SCAN_CONTROL_TRANSFERS) " +
                 "must be specified in the DBB Git Migration Modeler Configuration file. Exiting.");
             System.exit(1);
+        } else {
+            props.setProperty("SCAN_CONTROL_TRANSFERS", scanControlTransfers);
         }
         
         // Log configuration
