@@ -200,6 +200,15 @@ public class MigrationOrchestrator {
             deleteDirectory(config.getProperty("DBB_MODELER_APPLICATION_DIR"));
             deleteDirectory(config.getProperty("DBB_MODELER_LOGS"));
             deleteDirectory(config.getProperty("DBB_MODELER_BUILD_CONFIGURATION"));
+
+            // Cleanup metadata store if file-based
+            if ("file".equalsIgnoreCase(config.getProperty("DBB_MODELER_METADATASTORE_TYPE"))) {
+                String metadataStoreDir = config.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR");
+                if (metadataStoreDir != null) {
+                    deleteDirectory(metadataStoreDir);
+                    Files.createDirectories(Paths.get(metadataStoreDir));
+                }
+            }
             
             // Create logs directory
             String logsDir = config.getProperty("DBB_MODELER_LOGS");
@@ -320,17 +329,7 @@ public class MigrationOrchestrator {
         try {
             String appDir = config.getProperty("DBB_MODELER_APPLICATION_DIR");
             String logsDir = config.getProperty("DBB_MODELER_LOGS");
-            String metadataStoreType = config.getProperty("DBB_MODELER_METADATASTORE_TYPE");
-            
-            // Cleanup metadata store if file-based
-            if ("file".equalsIgnoreCase(metadataStoreType)) {
-                String metadataStoreDir = config.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR");
-                if (metadataStoreDir != null) {
-                    deleteDirectory(metadataStoreDir);
-                    Files.createDirectories(Paths.get(metadataStoreDir));
-                }
-            }
-            
+                        
             Set<String> filterSet = parseApplicationFilter(applicationFilter);
             File appDirFile = new File(appDir);
             File[] appDirs = appDirFile.listFiles(File::isDirectory);
