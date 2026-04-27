@@ -665,8 +665,7 @@ public class AssessUsage {
         
         // Build dependency graph
         for (int i = 0; i < files.size(); i++) {
-            String applicationFolder = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + props.getProperty("application");
-            String file = applicationFolder + "/" + files.get(i);
+            String file = files.get(i);
             String buildGroup = props.getProperty("application") + "-" + props.getProperty("APPLICATION_DEFAULT_BRANCH");
             String collectionName = "sources";
             LogicalFile lFile = metadataStoreUtils.getLogicalFile(file, buildGroup, collectionName);
