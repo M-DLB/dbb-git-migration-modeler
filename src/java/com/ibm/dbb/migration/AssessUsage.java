@@ -202,20 +202,26 @@ public class AssessUsage {
         }
         
         // Validate metadata store type
-        String metadataStoreType = config.getProperty("DBB_MODELER_METADATASTORE_TYPE");
-        if (metadataStoreType == null || (!metadataStoreType.equals("file") && !metadataStoreType.equals("db2"))) {
-            logger.logMessage("*! [ERROR] The type of MetadataStore can only be 'file' or 'db2'. Exiting.");
+        try {
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                "DBB_MODELER_METADATASTORE_TYPE", "The type of MetadataStore");
+            String metadataStoreType = props.getProperty("DBB_MODELER_METADATASTORE_TYPE");
+            if (!metadataStoreType.equals("file") && !metadataStoreType.equals("db2")) {
+                throw new IllegalArgumentException("The type of MetadataStore can only be 'file' or 'db2'");
+            }
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("DBB_MODELER_METADATASTORE_TYPE", metadataStoreType);
         
         // Validate APPLICATION_DEFAULT_BRANCH
-        String defaultBranch = config.getProperty("APPLICATION_DEFAULT_BRANCH");
-        if (defaultBranch == null) {
-            logger.logMessage("*! [ERROR] The default branch name setting APPLICATION_DEFAULT_BRANCH must be specified. Exiting.");
+        try {
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                "APPLICATION_DEFAULT_BRANCH", "The default branch name setting APPLICATION_DEFAULT_BRANCH");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("APPLICATION_DEFAULT_BRANCH", defaultBranch);
         
         // Load MOVE_FILES_FLAG with default
         String moveFilesFlag = config.getProperty("MOVE_FILES_FLAG", "true");
@@ -234,48 +240,32 @@ public class AssessUsage {
         }
         
         // Validate metadata store specific properties
-        if (metadataStoreType.equals("file")) {
-            try {
+        String metadataStoreType = props.getProperty("DBB_MODELER_METADATASTORE_TYPE");
+        try {
+            if (metadataStoreType.equals("file")) {
                 ConfigurationUtility.loadRequiredProperty(config, props,
                     "DBB_MODELER_FILE_METADATA_STORE_DIR", "The location for the File MetadataStore");
-            } catch (IllegalArgumentException e) {
-                logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
-                System.exit(1);
-            }
-        } else if (metadataStoreType.equals("db2")) {
-            // Validate Db2 JDBC ID (value only, no path check)
-            String jdbcId = config.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID");
-            if (jdbcId == null || jdbcId.trim().isEmpty()) {
-                logger.logMessage("*! [ERROR] Db2 MetadataStore JDBC ID must be specified. Exiting.");
-                System.exit(1);
-            }
-            props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID", jdbcId);
-            
-            // Validate Db2 config file (requires path check)
-            try {
+            } else if (metadataStoreType.equals("db2")) {
+                // Validate Db2 JDBC ID (value only, no path check)
+                ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                    "DBB_MODELER_DB2_METADATASTORE_JDBC_ID", "Db2 MetadataStore JDBC ID");
+                
+                // Validate Db2 config file (requires path check)
                 ConfigurationUtility.loadRequiredProperty(config, props,
                     "DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", "The Db2 Connection configuration file");
-            } catch (IllegalArgumentException e) {
-                logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
-                System.exit(1);
+                
+                // Validate Db2 password file (value only, no path check needed)
+                ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                    "DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", "Db2 MetadataStore password file");
             }
             
-            // Validate Db2 password file (value only, no path check needed)
-            String passwordFile = config.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE");
-            if (passwordFile == null || passwordFile.trim().isEmpty()) {
-                logger.logMessage("*! [ERROR] Db2 MetadataStore password file must be specified. Exiting.");
-                System.exit(1);
-            }
-            props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", passwordFile);
-        }
-        
-        // Load SCAN_CONTROL_TRANSFERS
-        String scanControlTransfers = config.getProperty("SCAN_CONTROL_TRANSFERS");
-        if (scanControlTransfers == null) {
-            logger.logMessage("*! [ERROR] The Scan Control Transfers parameter (SCAN_CONTROL_TRANSFERS) must be specified. Exiting.");
+            // Load SCAN_CONTROL_TRANSFERS
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                "SCAN_CONTROL_TRANSFERS", "The Scan Control Transfers parameter (SCAN_CONTROL_TRANSFERS)");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("SCAN_CONTROL_TRANSFERS", scanControlTransfers);
     }
     
     private void initScriptParameters() throws Exception {

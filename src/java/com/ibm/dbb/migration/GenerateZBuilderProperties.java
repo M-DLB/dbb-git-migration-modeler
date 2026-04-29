@@ -12,6 +12,7 @@ package com.ibm.dbb.migration;
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.migration.model.TypesMapping;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
+import com.ibm.dbb.migration.utils.ConfigurationUtility;
 import com.ibm.dbb.migration.utils.Logger;
 import org.apache.commons.cli.*;
 import org.yaml.snakeyaml.DumperOptions;
@@ -593,37 +594,26 @@ public class GenerateZBuilderProperties {
     }
     
     private void validateAndLoadConfiguration(Properties config) {
-        // Validate DBB_MODELER_BUILD_CONFIGURATION
-        String buildConfigDir = config.getProperty("DBB_MODELER_BUILD_CONFIGURATION");
-        if (buildConfigDir == null) {
-            logger.logMessage("*! [ERROR] The Build Configuration folder must be specified. Exiting.");
+        try {
+            // Validate DBB_MODELER_BUILD_CONFIGURATION (no path check, just required)
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                "DBB_MODELER_BUILD_CONFIGURATION", "The Build Configuration folder");
+            
+            // Validate DBB_ZBUILDER directory
+            ConfigurationUtility.loadRequiredProperty(config, props, "DBB_ZBUILDER",
+                "The DBB zBuilder instance");
+            
+            // Validate DBB_MODELER_APPLICATION_DIR directory
+            ConfigurationUtility.loadRequiredProperty(config, props, "DBB_MODELER_APPLICATION_DIR",
+                "The Application's directory");
+            
+            // Validate TYPE_CONFIGURATIONS_FILE
+            ConfigurationUtility.loadRequiredProperty(config, props, "TYPE_CONFIGURATIONS_FILE",
+                "The Types Configurations file");
+        } catch (IllegalArgumentException e) {
+            logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
         }
-        props.setProperty("DBB_MODELER_BUILD_CONFIGURATION", buildConfigDir);
-        
-        // Validate DBB_ZBUILDER
-        String zBuilderDir = config.getProperty("DBB_ZBUILDER");
-        if (zBuilderDir == null || !new File(zBuilderDir).exists()) {
-            logger.logMessage("*! [ERROR] The DBB zBuilder instance must be specified and exist. Exiting.");
-            System.exit(1);
-        }
-        props.setProperty("DBB_ZBUILDER", zBuilderDir);
-        
-        // Validate DBB_MODELER_APPLICATION_DIR
-        String appDir = config.getProperty("DBB_MODELER_APPLICATION_DIR");
-        if (appDir == null || !new File(appDir).exists()) {
-            logger.logMessage("*! [ERROR] The Application's directory must be specified and exist. Exiting.");
-            System.exit(1);
-        }
-        props.setProperty("DBB_MODELER_APPLICATION_DIR", appDir);
-        
-        // Validate TYPE_CONFIGURATIONS_FILE
-        String typeConfigFile = config.getProperty("TYPE_CONFIGURATIONS_FILE");
-        if (typeConfigFile == null || !new File(typeConfigFile).exists()) {
-            logger.logMessage("*! [ERROR] The Types Configurations file must be specified and exist. Exiting.");
-            System.exit(1);
-        }
-        props.setProperty("TYPE_CONFIGURATIONS_FILE", typeConfigFile);
     }
     
     private TypesMapping.TypeConfiguration findTypeConfiguration(String typeToFind) {

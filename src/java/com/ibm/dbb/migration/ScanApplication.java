@@ -197,123 +197,61 @@ public class ScanApplication {
             System.exit(1);
         }
         
-        // Validate and set application directory
-        if (configuration.getProperty("DBB_MODELER_APPLICATION_DIR") != null) {
-            String applicationDirectory = configuration.getProperty("DBB_MODELER_APPLICATION_DIR") + 
+        try {
+            // Validate and load DBB_MODELER_APPLICATION_DIR
+            ConfigurationUtility.loadRequiredProperty(configuration, props,
+                "DBB_MODELER_APPLICATION_DIR", "The Applications directory");
+            
+            // Set application-specific directory
+            String applicationDirectory = props.getProperty("DBB_MODELER_APPLICATION_DIR") +
                 "/" + props.getProperty("application");
             File directory = new File(applicationDirectory);
-            if (directory.exists()) {
-                props.setProperty("applicationDirectory", applicationDirectory);
-            } else {
-                logger.logMessage("*! [ERROR] Application Directory '" + applicationDirectory + 
-                    "' does not exist. Exiting.");
-                System.exit(1);
+            if (!directory.exists()) {
+                throw new IllegalArgumentException("Application Directory '" + applicationDirectory +
+                    "' does not exist");
             }
-        } else {
-            logger.logMessage("*! [ERROR] The Applications directory must be specified in the " +
-                "DBB Git Migration Modeler Configuration file. Exiting.");
-            System.exit(1);
-        }
-        
-        // Validate repository path mapping file
-        try {
+            props.setProperty("applicationDirectory", applicationDirectory);
+            
+            // Validate repository path mapping file
             ConfigurationUtility.loadRequiredProperty(configuration, props,
                 "REPOSITORY_PATH_MAPPING_FILE", "The Repository Paths Mapping file");
+            
+            // Validate metadata store type
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configuration, props,
+                "DBB_MODELER_METADATASTORE_TYPE", "The type of MetadataStore");
+            String metadataStoreType = props.getProperty("DBB_MODELER_METADATASTORE_TYPE");
+            if (!metadataStoreType.equals("file") && !metadataStoreType.equals("db2")) {
+                throw new IllegalArgumentException("The type of MetadataStore can only be 'file' or 'db2'");
+            }
+            
+            // Handle file metadata store
+            if (metadataStoreType.equals("file")) {
+                ConfigurationUtility.loadRequiredProperty(configuration, props,
+                    "DBB_MODELER_FILE_METADATA_STORE_DIR", "The location for the File MetadataStore");
+            }
+            // Handle DB2 metadata store
+            else if (metadataStoreType.equals("db2")) {
+                ConfigurationUtility.validateAndLoadRequiredPropertyValue(configuration, props,
+                    "DBB_MODELER_DB2_METADATASTORE_JDBC_ID", "The User ID for Db2 MetadataStore JDBC connection");
+                
+                ConfigurationUtility.loadRequiredProperty(configuration, props,
+                    "DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", "The Db2 Connection configuration file");
+                
+                ConfigurationUtility.validateAndLoadRequiredPropertyValue(configuration, props,
+                    "DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", "The Password File for Db2 Metadatastore JDBC connection");
+            }
+            
+            // Validate application default branch
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configuration, props,
+                "APPLICATION_DEFAULT_BRANCH", "The Application Default Branch");
+            
+            // Validate scan control transfers
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configuration, props,
+                "SCAN_CONTROL_TRANSFERS", "The Scan Control Transfers parameter (SCAN_CONTROL_TRANSFERS)");
+            
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
             System.exit(1);
-        }
-        
-        // Validate metadata store type
-        if (configuration.getProperty("DBB_MODELER_METADATASTORE_TYPE") != null) {
-            String metadataStoreType = configuration.getProperty("DBB_MODELER_METADATASTORE_TYPE");
-            props.setProperty("DBB_MODELER_METADATASTORE_TYPE", metadataStoreType);
-            if (!metadataStoreType.equals("file") && !metadataStoreType.equals("db2")) {
-                logger.logMessage("*! [ERROR] The type of MetadataStore can only be 'file' or 'db2'. Exiting.");
-                System.exit(1);
-            }
-        } else {
-            logger.logMessage("*! [ERROR] The type of MetadataStore (file or db2) must be specified " +
-                "in the DBB Git Migration Modeler Configuration file. Exiting.");
-            System.exit(1);
-        }
-        
-        // Handle file metadata store
-        if (props.getProperty("DBB_MODELER_METADATASTORE_TYPE").equals("file")) {
-            if (configuration.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR") != null) {
-                File directory = new File(configuration.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR"));
-                if (directory.exists()) {
-                    props.setProperty("DBB_MODELER_FILE_METADATA_STORE_DIR", 
-                        configuration.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR"));
-                } else {
-                    logger.logMessage("*! [ERROR] The location for the File MetadataStore '" + 
-                        configuration.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR") + 
-                        "' does not exist. Exiting.");
-                    System.exit(1);
-                }
-            } else {
-                logger.logMessage("*! [ERROR] The location of the File MetadataStore must be specified " +
-                    "in the DBB Git Migration Modeler Configuration file. Exiting.");
-                System.exit(1);
-            }
-        }
-        // Handle DB2 metadata store
-        else if (props.getProperty("DBB_MODELER_METADATASTORE_TYPE").equals("db2")) {
-            if (configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID") != null) {
-                props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID", 
-                    configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
-            } else {
-                logger.logMessage("*! [ERROR] The User ID for Db2 MetadataStore JDBC connection must be " +
-                    "specified in the DBB Git Migration Modeler Configuration file. Exiting.");
-                System.exit(1);
-            }
-            
-            if (configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE") != null) {
-                File file = new File(configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE"));
-                if (file.exists()) {
-                    props.setProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", 
-                        configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE"));
-                } else {
-                    logger.logMessage("*! [ERROR] The Db2 Connection configuration file for Db2 MetadataStore " +
-                        "JDBC connection '" + configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE") + 
-                        "' does not exist. Exiting.");
-                    System.exit(1);
-                }
-            } else {
-                logger.logMessage("*! [ERROR] The path to the Db2 Connection configuration file for Db2 " +
-                    "MetadataStore JDBC connection must be specified in the DBB Git Migration Modeler " +
-                    "Configuration file. Exiting.");
-                System.exit(1);
-            }
-            
-            if (configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE") == null) {
-                logger.logMessage("*! [ERROR] The Password File for Db2 Metadatastore JDBC connection must be " +
-                    "specified in the DBB Git Migration Modeler Configuration file. Exiting.");
-                System.exit(1);
-            } else {
-                props.setProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", 
-                    configuration.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
-            }
-        }
-        
-        // Validate application default branch
-        String defaultBranch = configuration.getProperty("APPLICATION_DEFAULT_BRANCH");
-        if (defaultBranch == null || defaultBranch.trim().isEmpty()) {
-            logger.logMessage("*! [ERROR] The Application Default Branch must be specified in the " +
-                "DBB Git Migration Modeler Configuration file. Exiting.");
-            System.exit(1);
-        } else {
-            props.setProperty("APPLICATION_DEFAULT_BRANCH", defaultBranch);
-        }
-        
-        // Validate scan control transfers
-        String scanControlTransfers = configuration.getProperty("SCAN_CONTROL_TRANSFERS");
-        if (scanControlTransfers == null || scanControlTransfers.trim().isEmpty()) {
-            logger.logMessage("*! [ERROR] The Scan Control Transfers parameter (SCAN_CONTROL_TRANSFERS) " +
-                "must be specified in the DBB Git Migration Modeler Configuration file. Exiting.");
-            System.exit(1);
-        } else {
-            props.setProperty("SCAN_CONTROL_TRANSFERS", scanControlTransfers);
         }
         
         // Log configuration

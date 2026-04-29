@@ -9,6 +9,7 @@
 
 package com.ibm.dbb.migration;
 
+import com.ibm.dbb.migration.utils.ConfigurationUtility;
 import com.ibm.dbb.migration.utils.FileUtility;
 import org.apache.commons.cli.*;
 
@@ -97,15 +98,22 @@ public class ValidateConfiguration {
         }
         
         // Validate zBuilder directory
-        String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
-        if (zBuilderPath == null || !new File(zBuilderPath).isDirectory()) {
-            throw new Exception("The zBuilder instance '" + zBuilderPath + "' doesn't exist.");
+        try {
+            ConfigurationUtility.validateDirectoryProperty(configProperties, "DBB_ZBUILDER",
+                "The zBuilder instance");
+        } catch (IllegalArgumentException e) {
+            throw new Exception(e.getMessage());
         }
         
-        // Validate DBB Community repository
+        // Validate DBB Community repository (optional)
         String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
-        if (dbbCommunityRepo != null && !new File(dbbCommunityRepo).isDirectory()) {
-            throw new Exception("The DBB Community repository instance '" + dbbCommunityRepo + "' doesn't exist.");
+        if (dbbCommunityRepo != null && !dbbCommunityRepo.trim().isEmpty()) {
+            try {
+                ConfigurationUtility.validateDirectoryProperty(configProperties, "DBB_COMMUNITY_REPO",
+                    "The DBB Community repository instance");
+            } catch (IllegalArgumentException e) {
+                throw new Exception(e.getMessage());
+            }
         }
         
         // Validate artifact repository configuration if publishing is enabled
@@ -260,45 +268,39 @@ public class ValidateConfiguration {
     }
     
     private void validateDb2Configuration() {
-        String jdbcId = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID");
-        if (jdbcId == null || jdbcId.isEmpty()) {
+        try {
+            ConfigurationUtility.validateRequiredProperty(configProperties,
+                "DBB_MODELER_DB2_METADATASTORE_JDBC_ID", "The Db2 MetadataStore User");
+            
+            ConfigurationUtility.validateFileProperty(configProperties,
+                "DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", "The Db2 Connection configuration file");
+            
+            ConfigurationUtility.validateFileProperty(configProperties,
+                "DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", "The Db2 MetadataStore Password File");
+        } catch (IllegalArgumentException e) {
             exitCode = 8;
-            System.err.println("[ERROR] The Db2 MetadataStore User is missing from the Configuration file.");
-        }
-        
-        String configFile = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE");
-        if (configFile == null || configFile.isEmpty()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The Db2 Connection configuration file is missing from the Configuration file.");
-        } else if (!new File(configFile).exists()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The Db2 Connection configuration file '" + configFile + "' does not exist.");
-        }
-        
-        String passwordFile = configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE");
-        if (passwordFile == null || passwordFile.isEmpty()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The Db2 MetadataStore Password File is missing from the Configuration file.");
-        } else if (!new File(passwordFile).exists()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The Db2 MetadataStore Password File '" + passwordFile + "' does not exist.");
+            System.err.println("[ERROR] " + e.getMessage());
         }
     }
     
     private void validateFileMetadataStore() {
-        String fileMetadataStoreDir = configProperties.getProperty("DBB_MODELER_FILE_METADATA_STORE_DIR");
-        if (fileMetadataStoreDir == null || fileMetadataStoreDir.isEmpty()) {
+        try {
+            ConfigurationUtility.validateRequiredProperty(configProperties,
+                "DBB_MODELER_FILE_METADATA_STORE_DIR",
+                "The location of the DBB File-based MetadataStore");
+        } catch (IllegalArgumentException e) {
             exitCode = 8;
-            System.err.println("[ERROR] The location of the DBB File-based MetadataStore must be specified.");
+            System.err.println("[ERROR] " + e.getMessage());
         }
     }
     
     private void validateArtifactRepository() {
-        String serverUrl = configProperties.getProperty("ARTIFACT_REPOSITORY_SERVER_URL");
-        if (serverUrl == null || serverUrl.isEmpty()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The URL of the Artifact Repository Server was not specified.");
-        } else {
+        try {
+            ConfigurationUtility.validateRequiredProperty(configProperties,
+                "ARTIFACT_REPOSITORY_SERVER_URL", "The URL of the Artifact Repository Server");
+            
+            String serverUrl = configProperties.getProperty("ARTIFACT_REPOSITORY_SERVER_URL");
+            
             // Check if server is reachable
             try {
                 URL url = new URL(serverUrl);
@@ -310,32 +312,26 @@ public class ValidateConfiguration {
                 
                 if (responseCode != 200 && responseCode != 302) {
                     exitCode = 8;
-                    System.err.println("[ERROR] The Artifact Repository Server '" + serverUrl + 
+                    System.err.println("[ERROR] The Artifact Repository Server '" + serverUrl +
                         "' is not reachable. HTTP response code: " + responseCode);
                 }
             } catch (Exception e) {
                 exitCode = 8;
-                System.err.println("[ERROR] The Artifact Repository Server '" + serverUrl + 
+                System.err.println("[ERROR] The Artifact Repository Server '" + serverUrl +
                     "' is not reachable: " + e.getMessage());
             }
-        }
-        
-        String user = configProperties.getProperty("ARTIFACT_REPOSITORY_USER");
-        if (user == null || user.isEmpty()) {
+            
+            ConfigurationUtility.validateRequiredProperty(configProperties,
+                "ARTIFACT_REPOSITORY_USER", "The User for the Artifact Repository Server");
+            
+            ConfigurationUtility.validateRequiredProperty(configProperties,
+                "ARTIFACT_REPOSITORY_PASSWORD", "The Password of the User for the Artifact Repository Server");
+            
+            ConfigurationUtility.validateRequiredProperty(configProperties,
+                "ARTIFACT_REPOSITORY_SUFFIX", "The Suffix for Artifact Repositories");
+        } catch (IllegalArgumentException e) {
             exitCode = 8;
-            System.err.println("[ERROR] The User for the Artifact Repository Server was not specified.");
-        }
-        
-        String password = configProperties.getProperty("ARTIFACT_REPOSITORY_PASSWORD");
-        if (password == null || password.isEmpty()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The Password of the User for the Artifact Repository Server was not specified.");
-        }
-        
-        String suffix = configProperties.getProperty("ARTIFACT_REPOSITORY_SUFFIX");
-        if (suffix == null || suffix.isEmpty()) {
-            exitCode = 8;
-            System.err.println("[ERROR] The Suffix for Artifact Repositories was not specified.");
+            System.err.println("[ERROR] " + e.getMessage());
         }
     }
     
