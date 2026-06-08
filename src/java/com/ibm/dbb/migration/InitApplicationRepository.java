@@ -563,7 +563,7 @@ public class InitApplicationRepository {
         if (exitCode != 0) return;
         
         // Git commit
-        String commitMessage = configProperties.getProperty("GIT_COMMIT_MESSAGE") != null ? configProperties.getProperty("GIT_COMMIT_MESSAGE") : "Initial Loading";
+        String commitMessage = configProperties.getProperty("GIT_COMMIT_MESSAGE") != null ? configProperties.getProperty("GIT_COMMIT_MESSAGE").replaceAll("\"", "").trim() : "Initial Loading";
         logger.logMessage("** Commit files to Git repository with commit message '" + commitMessage + "'");
         executeCommand(Arrays.asList("git", "commit", "-m", commitMessage), directory, logFile);
     }
