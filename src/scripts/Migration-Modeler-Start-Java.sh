@@ -142,6 +142,19 @@ if [ $rc -eq 0 ]; then
 	echo ""
 	echo "[PHASE] Cleanup working directories"
 	if [[ $INTERACTIVE_RUN == "true" ]]; then
+		read -p "Do you want to keep the work repositories folder '$DBB_MODELER_APPLICATION_DIR' (Y/n): " variable
+	else
+		variable="Y"
+	fi
+	
+	if [[ $variable =~ ^[Nn]$ ]]; then
+		if [ -d $DBB_MODELER_APPLICATION_DIR ]; then
+			rm -rf $DBB_MODELER_APPLICATION_DIR
+			echo "[INFO] Removed '${DBB_MODELER_APPLICATION_DIR}' folder"
+		fi
+	fi
+
+	if [[ $INTERACTIVE_RUN == "true" ]]; then
 		read -p "Do you want to clean the working directory '$DBB_MODELER_WORK' (Y/n): " variable
 	else
 		variable="Y"
@@ -153,10 +166,6 @@ if [ $rc -eq 0 ]; then
 		if [ -d $DBB_MODELER_APPCONFIG_DIR ]; then
 			rm -rf $DBB_MODELER_APPCONFIG_DIR
 			echo "[INFO] Removed '${DBB_MODELER_APPCONFIG_DIR}' folder"
-		fi
-		if [ -d $DBB_MODELER_APPLICATION_DIR ]; then
-			rm -rf $DBB_MODELER_APPLICATION_DIR
-			echo "[INFO] Removed '${DBB_MODELER_APPLICATION_DIR}' folder"
 		fi
         if [ -d $DBB_MODELER_LOGS ]; then
             rm -rf $DBB_MODELER_LOGS
