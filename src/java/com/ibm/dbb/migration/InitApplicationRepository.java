@@ -196,19 +196,18 @@ public class InitApplicationRepository {
             if (isGitRepository(appRepoDir)) {
                 logger.logMessage("*! [WARNING] '" + appRepoDir.getAbsolutePath() +
                     "' is already a Git repository. Skip initialization for " + appName + ".");
-                return;
+            } else {
+                // Initialize Git repository
+                initializeGitRepository(appRepoDir, defaultBranch, logFile);
             }
+
+            if (exitCode != 0) return;
             
             // Reset DBB Metadatastore buildGroup
             String buildGroupName = appName + "-" + defaultBranch;
             resetBuildGroup(buildGroupName, appName, logFile);
             
-            if (exitCode != 0) return;
-            
-            // Initialize Git repository
-            initializeGitRepository(appRepoDir, defaultBranch, logFile);
-            
-            if (exitCode != 0) return;
+            if (exitCode != 0) return;        
             
             // Copy .gitattributes file
             copyGitAttributes(appRepoDir, logFile);
@@ -241,7 +240,9 @@ public class InitApplicationRepository {
             if (exitCode != 0) return;
             
             // Create tag and release branch
-            createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
+            if (configProperties.getProperty("GIT_TAG_RELEASE") != null && configProperties.getProperty("GIT_TAG_RELEASE").equalsIgnoreCase("true")) {
+                createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
+            }
             
             if (exitCode == 0) {
                 logger.logMessage("** Initializing Git repository for application '" + appName +
@@ -562,8 +563,9 @@ public class InitApplicationRepository {
         if (exitCode != 0) return;
         
         // Git commit
-        logger.logMessage("** Commit files to Git repository");
-        executeCommand(Arrays.asList("git", "commit", "-m", "Initial Commit"), directory, logFile);
+        String commitMessage = configProperties.getProperty("GIT_COMMIT_MESSAGE") != null ? configProperties.getProperty("GIT_COMMIT_MESSAGE") : "Initial Loading";
+        logger.logMessage("** Commit files to Git repository with Commit message '" + commitMessage + "'");
+        executeCommand(Arrays.asList("git", "commit", "-m", commitMessage), directory, logFile);
     }
     
     private void createTagAndReleaseBranch(File directory, String appName, String defaultBranch, String logFile) throws IOException {
@@ -785,5 +787,3 @@ public class InitApplicationRepository {
     }
     
 }
-
-// Made with Bob

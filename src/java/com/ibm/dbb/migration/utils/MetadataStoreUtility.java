@@ -284,5 +284,3 @@ public class MetadataStoreUtility {
         return true;
     }
 }
-
-// Made with Bob

@@ -144,5 +144,3 @@ public class FileUtility {
         copyFileWithTags(sourcePath.toFile(), targetPath.toFile());
     }
 }
-
-// Made with Bob

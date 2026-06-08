@@ -291,5 +291,3 @@ public class ApplicationDescriptor {
         }
     }
 }
-
-// Made with Bob

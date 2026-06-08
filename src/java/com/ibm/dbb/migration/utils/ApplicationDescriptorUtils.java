@@ -340,5 +340,3 @@ public class ApplicationDescriptorUtils {
         return null;
     }
 }
-
-// Made with Bob

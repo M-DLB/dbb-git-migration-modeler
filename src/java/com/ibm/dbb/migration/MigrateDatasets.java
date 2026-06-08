@@ -715,5 +715,3 @@ public class MigrateDatasets {
         errorMessage.append(line1).append(line2).append(line3).append(line4).append(line5);
     }
 }
-
-// Made with Bob

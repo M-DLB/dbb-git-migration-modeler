@@ -179,5 +179,3 @@ public class RepositoryPathsMapping {
         }
     }
 }
-
-// Made with Bob

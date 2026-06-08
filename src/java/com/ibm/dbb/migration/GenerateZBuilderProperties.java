@@ -577,8 +577,8 @@ public class GenerateZBuilderProperties {
             // Validate and load configuration using ValidateConfiguration
             logger.logMessage("** Validating configuration file...");
             try {
-                Properties configuration = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
-                validateAndLoadConfiguration(configuration);
+                Properties configProperties = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
+                validateAndLoadConfiguration(configProperties);
             } catch (Exception e) {
                 logger.logMessage("*! [ERROR] Configuration validation failed: " + e.getMessage());
                 System.exit(1);
@@ -593,22 +593,22 @@ public class GenerateZBuilderProperties {
         props.forEach((k, v) -> logger.logMessage("\t" + k + " -> " + v));
     }
     
-    private void validateAndLoadConfiguration(Properties config) {
+    private void validateAndLoadConfiguration(Properties configProperties) {
         try {
             // Validate DBB_MODELER_BUILD_CONFIGURATION (no path check, just required)
-            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configProperties, props,
                 "DBB_MODELER_BUILD_CONFIGURATION", "The Build Configuration folder");
             
             // Validate DBB_ZBUILDER directory
-            ConfigurationUtility.loadRequiredProperty(config, props, "DBB_ZBUILDER",
+            ConfigurationUtility.loadRequiredProperty(configProperties, props, "DBB_ZBUILDER",
                 "The DBB zBuilder instance");
             
             // Validate DBB_MODELER_APPLICATION_DIR directory
-            ConfigurationUtility.loadRequiredProperty(config, props, "DBB_MODELER_APPLICATION_DIR",
+            ConfigurationUtility.loadRequiredProperty(configProperties, props, "DBB_MODELER_APPLICATION_DIR",
                 "The Application's directory");
             
             // Validate TYPE_CONFIGURATIONS_FILE
-            ConfigurationUtility.loadRequiredProperty(config, props, "TYPE_CONFIGURATIONS_FILE",
+            ConfigurationUtility.loadRequiredProperty(configProperties, props, "TYPE_CONFIGURATIONS_FILE",
                 "The Types Configurations file");
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
@@ -639,5 +639,3 @@ public class GenerateZBuilderProperties {
         }
     }
 }
-
-// Made with Bob

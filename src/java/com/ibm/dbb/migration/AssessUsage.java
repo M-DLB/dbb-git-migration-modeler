@@ -166,8 +166,8 @@ public class AssessUsage {
             // Validate and load configuration using ValidateConfiguration
             logger.logMessage("** Validating configuration file...");
             try {
-                Properties configuration = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
-                validateAndLoadConfiguration(configuration);
+                Properties configProperties = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
+                validateAndLoadConfiguration(configProperties);
             } catch (Exception e) {
                 logger.logMessage("*! [ERROR] Configuration validation failed: " + e.getMessage());
                 System.exit(1);
@@ -182,10 +182,10 @@ public class AssessUsage {
         props.forEach((k, v) -> logger.logMessage("\t" + k + " -> " + v));
     }
     
-    private void validateAndLoadConfiguration(Properties config) {
+    private void validateAndLoadConfiguration(Properties configProperties) {
         // Validate and load DBB_MODELER_APPCONFIG_DIR
         try {
-            ConfigurationUtility.loadRequiredProperty(config, props,
+            ConfigurationUtility.loadRequiredProperty(configProperties, props,
                 "DBB_MODELER_APPCONFIG_DIR", "The Configurations directory");
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
@@ -194,7 +194,7 @@ public class AssessUsage {
         
         // Validate and load DBB_MODELER_APPLICATION_DIR
         try {
-            ConfigurationUtility.loadRequiredProperty(config, props,
+            ConfigurationUtility.loadRequiredProperty(configProperties, props,
                 "DBB_MODELER_APPLICATION_DIR", "The Applications directory");
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
@@ -203,7 +203,7 @@ public class AssessUsage {
         
         // Validate metadata store type
         try {
-            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configProperties, props,
                 "DBB_MODELER_METADATASTORE_TYPE", "The type of MetadataStore");
             String metadataStoreType = props.getProperty("DBB_MODELER_METADATASTORE_TYPE");
             if (!metadataStoreType.equals("file") && !metadataStoreType.equals("db2")) {
@@ -216,7 +216,7 @@ public class AssessUsage {
         
         // Validate APPLICATION_DEFAULT_BRANCH
         try {
-            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configProperties, props,
                 "APPLICATION_DEFAULT_BRANCH", "The default branch name setting APPLICATION_DEFAULT_BRANCH");
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
@@ -224,15 +224,15 @@ public class AssessUsage {
         }
         
         // Load MOVE_FILES_FLAG with default
-        String moveFilesFlag = config.getProperty("MOVE_FILES_FLAG", "true");
+        String moveFilesFlag = configProperties.getProperty("MOVE_FILES_FLAG", "true");
         props.setProperty("MOVE_FILES_FLAG", moveFilesFlag);
-        if (config.getProperty("MOVE_FILES_FLAG") == null) {
+        if (configProperties.getProperty("MOVE_FILES_FLAG") == null) {
             logger.logMessage("** [WARNING] The MOVE_FILES_FLAG setting is not specified and will be set to 'true' by default.");
         }
         
         // Validate REPOSITORY_PATH_MAPPING_FILE
         try {
-            ConfigurationUtility.loadRequiredProperty(config, props,
+            ConfigurationUtility.loadRequiredProperty(configProperties, props,
                 "REPOSITORY_PATH_MAPPING_FILE", "The reference to the REPOSITORY_PATH_MAPPING_FILE");
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
@@ -243,24 +243,24 @@ public class AssessUsage {
         String metadataStoreType = props.getProperty("DBB_MODELER_METADATASTORE_TYPE");
         try {
             if (metadataStoreType.equals("file")) {
-                ConfigurationUtility.loadRequiredProperty(config, props,
+                ConfigurationUtility.loadRequiredProperty(configProperties, props,
                     "DBB_MODELER_FILE_METADATA_STORE_DIR", "The location for the File MetadataStore");
             } else if (metadataStoreType.equals("db2")) {
                 // Validate Db2 JDBC ID (value only, no path check)
-                ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                ConfigurationUtility.validateAndLoadRequiredPropertyValue(configProperties, props,
                     "DBB_MODELER_DB2_METADATASTORE_JDBC_ID", "Db2 MetadataStore JDBC ID");
                 
                 // Validate Db2 config file (requires path check)
-                ConfigurationUtility.loadRequiredProperty(config, props,
+                ConfigurationUtility.loadRequiredProperty(configProperties, props,
                     "DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", "The Db2 Connection configuration file");
                 
                 // Validate Db2 password file (value only, no path check needed)
-                ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+                ConfigurationUtility.validateAndLoadRequiredPropertyValue(configProperties, props,
                     "DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", "Db2 MetadataStore password file");
             }
             
             // Load SCAN_CONTROL_TRANSFERS
-            ConfigurationUtility.validateAndLoadRequiredPropertyValue(config, props,
+            ConfigurationUtility.validateAndLoadRequiredPropertyValue(configProperties, props,
                 "SCAN_CONTROL_TRANSFERS", "The Scan Control Transfers parameter (SCAN_CONTROL_TRANSFERS)");
         } catch (IllegalArgumentException e) {
             logger.logMessage("*! [ERROR] " + e.getMessage() + " Exiting.");
@@ -1026,9 +1026,12 @@ public class AssessUsage {
         }
         
         try {
+            logger.logMessage("\t==> Updating Migration Mapping files for Applications '" +
+                sourceApplication + "' and '" + targetApplication + "' for file '" + oldFileLocation + "'.");
             File newSourceApplicationMappingFile = new File(configurationsDirectory + "/" +
                 sourceApplication + ".mapping.new");
             newSourceApplicationMappingFile.createNewFile();
+            boolean foundMatch = false;
             
             try (BufferedReader sourceReader = new BufferedReader(new FileReader(sourceApplicationMappingFile));
                  BufferedWriter targetWriter = new BufferedWriter(new FileWriter(targetApplicationMappingFile, true));
@@ -1037,13 +1040,16 @@ public class AssessUsage {
                 String line;
                 while ((line = sourceReader.readLine()) != null) {
                     String[] lineSegments = line.split(" ");
-                    String fullOldPath = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + oldFileLocation;
+                    String fullOldPath = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" +
+                        sourceApplication + "/" + oldFileLocation;
                     
                     if (lineSegments.length > 1 && lineSegments[1].equals(fullOldPath)) {
                         // Update path and write to target mapping file
-                        lineSegments[1] = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" + targetRepositoryPath;
+                        lineSegments[1] = props.getProperty("DBB_MODELER_APPLICATION_DIR") + "/" +
+                            targetApplication + "/" + targetRepositoryPath;
                         String updatedLine = String.join(" ", lineSegments);
                         targetWriter.write(updatedLine + "\n");
+                        foundMatch = true;
                     } else {
                         // Keep in source mapping file
                         newSourceWriter.write(line + "\n");
@@ -1055,8 +1061,19 @@ public class AssessUsage {
             sourceApplicationMappingFile.delete();
             Files.move(newSourceApplicationMappingFile.toPath(), sourceApplicationMappingFile.toPath());
             
-            logger.logMessage("\t==> Updating Migration Mapping files for Applications '" +
-                sourceApplication + "' and '" + targetApplication + "' for file '" + oldFileLocation + "'.");
+            if (foundMatch) {
+                logger.logMessage("\t==> Moved mapping definition for file " + sourceApplication + "/" +
+                    oldFileLocation + " from " + configurationsDirectory + "/" + sourceApplication +
+                    ".mapping to " + targetApplication + "/" + targetRepositoryPath + " in " +
+                    configurationsDirectory + "/" + targetApplication + ".mapping.");
+            } else {
+                logger.logMessage("\t==> [WARNING] Update of DBB Migration Mapping files for " +
+                    sourceApplication + "/" + oldFileLocation + " failed. " + sourceApplication + "/" +
+                    oldFileLocation + " was not found in " + configurationsDirectory + "/" +
+                    sourceApplication + ".mapping. The DBB Migration Mapping files " +
+                    configurationsDirectory + "/" + sourceApplication + ".mapping and " +
+                    configurationsDirectory + "/" + targetApplication + ".mapping were not updated.");
+            }
                 
         } catch (IOException e) {
             logger.logMessage("*! [ERROR] Failed to update mapping files: " + e.getMessage());
@@ -1064,5 +1081,3 @@ public class AssessUsage {
         }
     }
 }
-
-// Made with Bob

@@ -518,5 +518,3 @@ public class ValidateConfiguration {
         }
     }
 }
-
-// Made with Bob

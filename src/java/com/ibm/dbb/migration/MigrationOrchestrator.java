@@ -587,5 +587,3 @@ public class MigrationOrchestrator {
         return apps;
     }
 }
-
-// Made with Bob

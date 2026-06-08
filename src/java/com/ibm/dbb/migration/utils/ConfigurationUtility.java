@@ -142,5 +142,3 @@ public class ConfigurationUtility {
         }
     }
 }
-
-// Made with Bob

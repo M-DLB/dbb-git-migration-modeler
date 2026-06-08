@@ -107,5 +107,3 @@ public class ApplicationMappingConfiguration {
                 '}';
     }
 }
-
-// Made with Bob

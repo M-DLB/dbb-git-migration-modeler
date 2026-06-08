@@ -175,31 +175,28 @@ public class ExtractApplications {
     private void loadConfiguration(String configFilePath) throws Exception {
         props.setProperty("configurationFilePath", configFilePath);
         
-        // Load configuration file directly (matching Groovy behavior)
-        Properties configuration = new Properties();
-        try (FileInputStream fis = new FileInputStream(configFilePath)) {
-            configuration.load(fis);
-        }
+        // Validate and load configuration using ValidateConfiguration
+        Properties configProperties = ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
         
         // Load only the properties used by extractApplications (matching Groovy script)
-        ConfigurationUtility.loadRequiredProperty(configuration, props, "DBB_MODELER_APPCONFIG_DIR", "Configurations directory");
-        ConfigurationUtility.loadRequiredProperty(configuration, props, "DBB_MODELER_APPMAPPINGS_DIR", "Applications Mappings directory");
-        ConfigurationUtility.loadRequiredProperty(configuration, props, "DBB_MODELER_APPLICATION_DIR", "Applications directory");
-        ConfigurationUtility.loadRequiredProperty(configuration, props, "REPOSITORY_PATH_MAPPING_FILE", "Repository Paths Mapping file");
+        ConfigurationUtility.loadRequiredProperty(configProperties, props, "DBB_MODELER_APPCONFIG_DIR", "Configurations directory");
+        ConfigurationUtility.loadRequiredProperty(configProperties, props, "DBB_MODELER_APPMAPPINGS_DIR", "Applications Mappings directory");
+        ConfigurationUtility.loadRequiredProperty(configProperties, props, "DBB_MODELER_APPLICATION_DIR", "Applications directory");
+        ConfigurationUtility.loadRequiredProperty(configProperties, props, "REPOSITORY_PATH_MAPPING_FILE", "Repository Paths Mapping file");
         
         // Optional properties
-        ConfigurationUtility.loadOptionalProperty(configuration, props, "APPLICATION_TYPES_MAPPING");
+        ConfigurationUtility.loadOptionalProperty(configProperties, props, "APPLICATION_TYPES_MAPPING");
         
         // SCAN_DATASET_MEMBERS with default
-        ConfigurationUtility.loadOptionalProperty(configuration, props, "SCAN_DATASET_MEMBERS", "false");
+        ConfigurationUtility.loadOptionalProperty(configProperties, props, "SCAN_DATASET_MEMBERS", "false");
         
         // SCAN_DATASET_MEMBERS_ENCODING with conditional default
         if (props.getProperty("SCAN_DATASET_MEMBERS") != null) {
-            ConfigurationUtility.loadOptionalProperty(configuration, props, "SCAN_DATASET_MEMBERS_ENCODING", "IBM-1047");
+            ConfigurationUtility.loadOptionalProperty(configProperties, props, "SCAN_DATASET_MEMBERS_ENCODING", "IBM-1047");
         }
         
         // APPLICATION_DEFAULT_BRANCH is required
-        String defaultBranch = configuration.getProperty("APPLICATION_DEFAULT_BRANCH");
+        String defaultBranch = configProperties.getProperty("APPLICATION_DEFAULT_BRANCH");
         if (defaultBranch == null || defaultBranch.trim().isEmpty()) {
             throw new IllegalArgumentException("APPLICATION_DEFAULT_BRANCH must be specified in configuration file");
         }
@@ -714,5 +711,3 @@ public class ExtractApplications {
         return "//'" + PDS + "(" + member + ")'";
     }
 }
-
-// Made with Bob

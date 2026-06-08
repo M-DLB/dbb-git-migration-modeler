@@ -1,6 +1,9 @@
+work-*
+
 # Gradle
 .gradle/
 build/
+lib/
 
 # Gradle wrapper - now included for portability
 !gradle/
@@ -48,7 +51,3 @@ Thumbs.db
 *.war
 *.ear
 hs_err_pid*
-
-# Stub compilation artifacts
-stubs/
-stubs-compiled/
