@@ -564,7 +564,7 @@ public class InitApplicationRepository {
         
         // Git commit
         String commitMessage = configProperties.getProperty("GIT_COMMIT_MESSAGE") != null ? configProperties.getProperty("GIT_COMMIT_MESSAGE") : "Initial Loading";
-        logger.logMessage("** Commit files to Git repository with Commit message '" + commitMessage + "'");
+        logger.logMessage("** Commit files to Git repository with commit message '" + commitMessage + "'");
         executeCommand(Arrays.asList("git", "commit", "-m", commitMessage), directory, logFile);
     }
     
