@@ -309,7 +309,11 @@ if [ $rc -eq 0 ]; then
 	echo "" >>$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE_FOLDER/$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE
 	echo "# DBB Git Migration Modeler configuration parms" >>$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE_FOLDER/$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE
 	for config in ${input_array[@]}; do
-		echo "${config}=\"${!config}\"" >>$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE_FOLDER/$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE
+		if [ "${config}" = "GIT_COMMIT_MESSAGE" ]; then
+			echo "${config}=\"${!config}\"" >>$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE_FOLDER/$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE
+		else
+			echo "${config}=${!config}" >>$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE_FOLDER/$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE
+		fi
 	done
 	
     for config in ${publishing_options[@]}; do
