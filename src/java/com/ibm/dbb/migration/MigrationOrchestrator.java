@@ -197,7 +197,7 @@ public class MigrationOrchestrator {
         
         try {
             deleteDirectory(config.getProperty("DBB_MODELER_APPCONFIG_DIR"));
-            deleteDirectory(config.getProperty("DBB_MODELER_APPLICATION_DIR"));
+            // deleteDirectory(config.getProperty("DBB_MODELER_APPLICATION_DIR"));
             deleteDirectory(config.getProperty("DBB_MODELER_LOGS"));
             deleteDirectory(config.getProperty("DBB_MODELER_BUILD_CONFIGURATION"));
 

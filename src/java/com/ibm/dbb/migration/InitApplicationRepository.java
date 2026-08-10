@@ -565,7 +565,7 @@ public class InitApplicationRepository {
         // Git commit
         String commitMessage = configProperties.getProperty("GIT_COMMIT_MESSAGE") != null ? configProperties.getProperty("GIT_COMMIT_MESSAGE").replaceAll("\"", "").trim() : "Initial Loading";
         logger.logMessage("** Commit files to Git repository with commit message '" + commitMessage + "'");
-        executeCommand(Arrays.asList("git", "commit", "-m", commitMessage), directory, logFile);
+        executeCommand(Arrays.asList("git", "commit", "--allow-empty", "-m", commitMessage), directory, logFile);
     }
     
     private void createTagAndReleaseBranch(File directory, String appName, String defaultBranch, String logFile) throws IOException {
@@ -575,11 +575,15 @@ public class InitApplicationRepository {
         }
         
         logger.logMessage("** Create git tag '" + version + "'");
-        executeCommand(Arrays.asList("git", "tag", version), directory, logFile);
+        executeCommand(Arrays.asList("git", "tag", "-f", version), directory, logFile);
         
         if (exitCode != 0) return;
         
         logger.logMessage("** Create release maintenance branch 'release/" + version + "'");
+        // Force delete branch anyway
+        executeCommand(Arrays.asList("git", "branch", "--delete", "-f", "release/" + version),
+            directory, logFile);
+        // Recreate branch anyway
         executeCommand(Arrays.asList("git", "branch", "release/" + version, "refs/tags/" + version),
             directory, logFile);
     }
