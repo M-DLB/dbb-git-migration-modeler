@@ -13,7 +13,9 @@ import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import com.ibm.dbb.migration.model.ApplicationDescriptor.*;
 import com.ibm.dbb.utils.FileUtils;
 import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 import com.ibm.dbb.migration.utils.ApplicationDescriptorRepresenter;
@@ -34,7 +36,9 @@ public class ApplicationDescriptorUtils {
      * @return ApplicationDescriptor object
      */
     public ApplicationDescriptor readApplicationDescriptor(File yamlFile) throws IOException {
-        Yaml yaml = new Yaml();
+        LoaderOptions loaderOptions = new LoaderOptions();
+        Constructor constructor = new Constructor(ApplicationDescriptor.class, loaderOptions);
+        Yaml yaml = new Yaml(constructor);
         try (FileReader reader = new FileReader(yamlFile)) {
             return yaml.loadAs(reader, ApplicationDescriptor.class);
         }
@@ -63,6 +67,7 @@ public class ApplicationDescriptorUtils {
         options.setIndent(2);
 
         ApplicationDescriptorRepresenter representer = new ApplicationDescriptorRepresenter(options);
+        representer.addClassTag(ApplicationDescriptor.class, Tag.MAP);
 
         Yaml yaml = new Yaml(representer, options);
 
