@@ -779,9 +779,7 @@ public class InitApplicationRepository {
             }
             
             int rc = process.waitFor();
-            if (rc != 0) {
-                exitCode = rc;
-            }
+            exitCode = rc;
             
         } catch (InterruptedException e) {
             exitCode = 8;
