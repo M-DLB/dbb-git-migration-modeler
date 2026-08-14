@@ -16,6 +16,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.introspector.Property;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 
@@ -25,8 +26,7 @@ public class ApplicationDescriptorRepresenter extends Representer {
      * Create object without specified dumper object
      */
     public ApplicationDescriptorRepresenter() {
-        super();
-        setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        this(new DumperOptions());
 /*        addClassTag(ApplicationDescriptor.class, Tag.MAP);
         addClassTag(Source.class, Tag.MAP);
         addClassTag(FileDef.class, Tag.MAP);
