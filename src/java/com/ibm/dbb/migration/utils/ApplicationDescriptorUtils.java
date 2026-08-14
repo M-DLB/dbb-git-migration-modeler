@@ -62,6 +62,7 @@ public class ApplicationDescriptorUtils {
         options.setIndent(2);
 
         Representer representer = new Representer(options);
+        representer.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         representer.addClassTag(ApplicationDescriptor.class, Tag.MAP);
         representer.addClassTag(Source.class, Tag.MAP);
         representer.addClassTag(FileDef.class, Tag.MAP);

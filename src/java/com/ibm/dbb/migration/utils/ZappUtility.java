@@ -12,9 +12,12 @@ package com.ibm.dbb.migration.utils;
 import com.ibm.dbb.migration.model.ApplicationDescriptor;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.representer.Representer;
 
 import java.io.*;
 import java.util.*;
+
+import com.ibm.dbb.utils.FileUtils;
 
 /**
  * Utility class for ZAPP file operations.
@@ -60,7 +63,7 @@ public class ZappUtility {
                 if ("Include File".equals(source.getArtifactsType())) {
                     Map<String, Object> propertyGroup = new LinkedHashMap<>();
                     propertyGroup.put("name", source.getName());
-                    propertyGroup.put("language", source.getLanguage());
+                    propertyGroup.put("language", source.getLanguage().toLowerCase());
                     
                     // Add syslib library
                     List<Map<String, Object>> libraries = new ArrayList<>();
@@ -87,35 +90,17 @@ public class ZappUtility {
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         options.setPrettyFlow(true);
         options.setIndent(2);
+
+        Representer representer = new Representer(options);
+        representer.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         
-        Yaml yaml = new Yaml(options);
+        Yaml yaml = new Yaml(representer, options);
         try (FileOutputStream fos = new FileOutputStream(zappFile);
              OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF-8")) {
             yaml.dump(zapp, writer);
         }
         
         // Set file tag to UTF-8 (z/OS specific)
-        setFileTagUTF8(zappFile);
-    }
-    
-    /**
-     * Set file tag to UTF-8 on z/OS systems
-     * @param file The file to tag
-     */
-    private static void setFileTagUTF8(File file) {
-        try {
-            // Try to use com.ibm.jzos.FileFactory if available (z/OS)
-            Class<?> fileFactoryClass = Class.forName("com.ibm.jzos.FileFactory");
-            Class<?> zFileClass = Class.forName("com.ibm.jzos.ZFile");
-            
-            Object zFile = fileFactoryClass.getMethod("newInstance", String.class)
-                .invoke(null, file.getAbsolutePath());
-            
-            zFileClass.getMethod("setFileTag", String.class, boolean.class)
-                .invoke(zFile, "UTF-8", true);
-                
-        } catch (Exception e) {
-            // Not on z/OS or JZOS not available, skip file tagging
-        }
+        FileUtils.setFileTag(zappFile.getAbsolutePath(), "UTF-8");
     }
 }
