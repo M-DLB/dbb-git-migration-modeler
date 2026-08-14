@@ -16,6 +16,7 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
+import com.ibm.dbb.migration.utils.ApplicationDescriptorRepresenter;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -61,14 +62,7 @@ public class ApplicationDescriptorUtils {
         options.setPrettyFlow(true);
         options.setIndent(2);
 
-        Representer representer = new Representer(options);
-        representer.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        representer.addClassTag(ApplicationDescriptor.class, Tag.MAP);
-        representer.addClassTag(Source.class, Tag.MAP);
-        representer.addClassTag(FileDef.class, Tag.MAP);
-        representer.addClassTag(Baseline.class, Tag.MAP);
-        representer.addClassTag(DependencyDescriptor.class, Tag.MAP);
-        representer.addClassTag(Consumer.class, Tag.MAP);
+        ApplicationDescriptorRepresenter representer = new ApplicationDescriptorRepresenter(options);
 
         Yaml yaml = new Yaml(representer, options);
 
