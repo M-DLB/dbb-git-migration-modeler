@@ -37,7 +37,7 @@ public class ApplicationDescriptorUtils {
      */
     public ApplicationDescriptor readApplicationDescriptor(File yamlFile) throws IOException {
         LoaderOptions loaderOptions = new LoaderOptions();
-        loaderOptions.setTagInspector(tag -> true);
+        loaderOptions.setTagInspector(tag -> false);
         Constructor constructor = new Constructor(ApplicationDescriptor.class, loaderOptions);
         Yaml yaml = new Yaml(constructor);
         try (FileReader reader = new FileReader(yamlFile)) {
@@ -68,7 +68,7 @@ public class ApplicationDescriptorUtils {
         options.setIndent(2);
 
         ApplicationDescriptorRepresenter representer = new ApplicationDescriptorRepresenter(options);
-        representer.addClassTag(ApplicationDescriptor.class, Tag.MAP);
+//        representer.addClassTag(ApplicationDescriptor.class, Tag.MAP);
 
         Yaml yaml = new Yaml(representer, options);
 

@@ -27,12 +27,12 @@ public class ApplicationDescriptorRepresenter extends Representer {
      */
     public ApplicationDescriptorRepresenter() {
         this(new DumperOptions());
-/*        addClassTag(ApplicationDescriptor.class, Tag.MAP);
+        addClassTag(ApplicationDescriptor.class, Tag.MAP);
         addClassTag(Source.class, Tag.MAP);
         addClassTag(FileDef.class, Tag.MAP);
         addClassTag(Baseline.class, Tag.MAP);
         addClassTag(DependencyDescriptor.class, Tag.MAP);
-        addClassTag(Consumer.class, Tag.MAP); */
+        addClassTag(Consumer.class, Tag.MAP);
     }
 
     /**
