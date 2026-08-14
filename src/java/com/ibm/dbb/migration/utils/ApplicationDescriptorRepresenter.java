@@ -53,7 +53,7 @@ public class ApplicationDescriptorRepresenter extends Representer {
 
     @Override
     protected Set<Property> getProperties(Class< ? extends Object> type) {
-/*        Set<Property> propertySet;
+        Set<Property> propertySet;
         if (typeDefinitions.containsKey(type)) {
             propertySet = typeDefinitions.get(type).getProperties();
         } else {
@@ -63,14 +63,14 @@ public class ApplicationDescriptorRepresenter extends Representer {
         List<Property> propsList = new ArrayList<>(propertySet);
         Collections.sort(propsList, new BeanPropertyComparator());
 
-        return new LinkedHashSet<>(propsList); */
-        final List<String> order = List.of("application", "schemaVersion", "description", "owner", "sources", "baselines", "dependencies", "consumers");
+        return new LinkedHashSet<>(propsList);
+/*        final List<String> order = List.of("application", "schemaVersion", "description", "owner", "sources", "baselines", "dependencies", "consumers");
         final Set<Property> result = new TreeSet<>(Comparator.comparingInt(a -> order.indexOf(a.getName())));
         result.addAll(super.getProperties(type)
                            .stream()
                            .filter(property -> order.contains(property.getName()))
                            .collect(Collectors.toSet()));
-        return result;        
+        return result;        */
     }
 
     class BeanPropertyComparator implements Comparator<Property> {
