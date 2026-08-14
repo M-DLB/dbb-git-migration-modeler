@@ -15,6 +15,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import com.ibm.dbb.migration.model.ApplicationDescriptor;
+import com.ibm.dbb.migration.model.ApplicationDescriptor.Baseline;
+import com.ibm.dbb.migration.model.ApplicationDescriptor.Consumer;
+import com.ibm.dbb.migration.model.ApplicationDescriptor.DependencyDescriptor;
+import com.ibm.dbb.migration.model.ApplicationDescriptor.FileDef;
+import com.ibm.dbb.migration.model.ApplicationDescriptor.Source;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.introspector.Property;
 import org.yaml.snakeyaml.nodes.Tag;
@@ -27,12 +33,6 @@ public class ApplicationDescriptorRepresenter extends Representer {
      */
     public ApplicationDescriptorRepresenter() {
         this(new DumperOptions());
-        addClassTag(ApplicationDescriptor.class, Tag.MAP);
-        addClassTag(Source.class, Tag.MAP);
-        addClassTag(FileDef.class, Tag.MAP);
-        addClassTag(Baseline.class, Tag.MAP);
-        addClassTag(DependencyDescriptor.class, Tag.MAP);
-        addClassTag(Consumer.class, Tag.MAP);
     }
 
     /**
@@ -43,6 +43,12 @@ public class ApplicationDescriptorRepresenter extends Representer {
     public ApplicationDescriptorRepresenter(DumperOptions options) {
         super(options);
         setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        addClassTag(ApplicationDescriptor.class, Tag.MAP);
+        addClassTag(Source.class, Tag.MAP);
+        addClassTag(FileDef.class, Tag.MAP);
+        addClassTag(Baseline.class, Tag.MAP);
+        addClassTag(DependencyDescriptor.class, Tag.MAP);
+        addClassTag(Consumer.class, Tag.MAP);
     }
 
     @Override
