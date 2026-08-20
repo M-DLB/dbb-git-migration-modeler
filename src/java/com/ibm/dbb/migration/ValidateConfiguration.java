@@ -19,6 +19,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -31,6 +33,7 @@ public class ValidateConfiguration {
     private Properties configProperties;
     private int exitCode = 0;
     private String modelerHome;
+    private List<String> errors = new ArrayList<>();
     
     /**
      * Validates a configuration file and returns the loaded properties.
@@ -43,39 +46,35 @@ public class ValidateConfiguration {
     public static Properties validateAndLoadConfiguration(String configFilePath) throws Exception {
         ValidateConfiguration validator = new ValidateConfiguration();
         validator.configFilePath = configFilePath;
-        
+
         // Validate the configuration file exists
         File configFile = new File(configFilePath);
         if (!configFile.exists()) {
             throw new Exception("DBB Git Migration Modeler configuration file not found: " + configFilePath);
         }
-        
+
         // Load configuration properties
         Properties configProperties = new Properties();
         try (FileInputStream fis = new FileInputStream(configFilePath)) {
             configProperties.load(fis);
         }
-        
+
         validator.configProperties = configProperties;
-        
+
         // Set modelerHome from DBB_MODELER_HOME property
         validator.modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
         if (validator.modelerHome == null || validator.modelerHome.isEmpty()) {
-            throw new Exception("DBB_MODELER_HOME property is not defined in the configuration file");
+            validator.errors.add("DBB_MODELER_HOME property is not defined in the configuration file");
         }
-        
+
         // Validate environment
         validator.validateEnvironment();
-        if (validator.exitCode != 0) {
-            throw new Exception("Environment validation failed");
+
+        // Validate DBB Toolkit version (only if environment is valid)
+        if (validator.exitCode == 0) {
+            validator.validateDBBToolkitVersion();
         }
-        
-        // Validate DBB Toolkit version
-        validator.validateDBBToolkitVersion();
-        if (validator.exitCode != 0) {
-            throw new Exception("DBB Toolkit version validation failed");
-        }
-        
+
         // Validate metadata store configuration
         String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
         if ("db2".equals(metadataStoreType)) {
@@ -83,28 +82,27 @@ public class ValidateConfiguration {
         } else if ("file".equals(metadataStoreType)) {
             validator.validateFileMetadataStore();
         } else {
-            throw new Exception("The specified DBB MetadataStore technology is not 'file' or 'db2'.");
+            validator.errors.add("The specified DBB MetadataStore technology is not 'file' or 'db2'.");
+            validator.exitCode = 8;
         }
-        
-        if (validator.exitCode != 0) {
-            throw new Exception("Configuration validation failed");
-        }
-        
+
         // Validate build framework - only zBuilder is supported
         String buildFramework = configProperties.getProperty("BUILD_FRAMEWORK");
         if (!"zBuilder".equals(buildFramework)) {
-            throw new Exception("The specified Build Framework '" + buildFramework +
+            validator.errors.add("The specified Build Framework '" + buildFramework +
                 "' is not valid. Only 'zBuilder' is supported.");
+            validator.exitCode = 8;
+        } else {
+            // Validate zBuilder directory
+            try {
+                ConfigurationUtility.validateDirectoryProperty(configProperties, "DBB_ZBUILDER",
+                    "The zBuilder instance");
+            } catch (IllegalArgumentException e) {
+                validator.errors.add(e.getMessage());
+                validator.exitCode = 8;
+            }
         }
-        
-        // Validate zBuilder directory
-        try {
-            ConfigurationUtility.validateDirectoryProperty(configProperties, "DBB_ZBUILDER",
-                "The zBuilder instance");
-        } catch (IllegalArgumentException e) {
-            throw new Exception(e.getMessage());
-        }
-        
+
         // Validate DBB Community repository (optional)
         String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
         if (dbbCommunityRepo != null && !dbbCommunityRepo.trim().isEmpty()) {
@@ -112,19 +110,25 @@ public class ValidateConfiguration {
                 ConfigurationUtility.validateDirectoryProperty(configProperties, "DBB_COMMUNITY_REPO",
                     "The DBB Community repository instance");
             } catch (IllegalArgumentException e) {
-                throw new Exception(e.getMessage());
+                validator.errors.add(e.getMessage());
+                validator.exitCode = 8;
             }
         }
-        
+
         // Validate artifact repository configuration if publishing is enabled
         String publishArtifacts = configProperties.getProperty("PUBLISH_ARTIFACTS");
         if ("true".equals(publishArtifacts)) {
             validator.validateArtifactRepository();
-            if (validator.exitCode != 0) {
-                throw new Exception("Artifact repository validation failed");
-            }
         }
-        
+
+        // Report all accumulated errors at once
+        if (validator.exitCode != 0) {
+            for (String error : validator.errors) {
+                System.err.println("[ERROR] " + error);
+            }
+            throw new Exception("Configuration validation failed with " + validator.errors.size() + " error(s).");
+        }
+
         return configProperties;
     }
     
@@ -234,27 +238,27 @@ public class ValidateConfiguration {
         String dbbHome = System.getenv("DBB_HOME");
         if (dbbHome == null || dbbHome.isEmpty()) {
             exitCode = 8;
-            System.err.println("[ERROR] Environment variable 'DBB_HOME' is not set.");
-            return;
+            errors.add("Environment variable 'DBB_HOME' is not set.");
+            return; // can't check further without DBB_HOME
         }
-        
+
         File dbbBin = new File(dbbHome, "bin/dbb");
         if (!dbbBin.exists()) {
             exitCode = 8;
-            System.err.println("[ERROR] The 'dbb' program was not found in DBB_HOME '" + dbbHome + "'.");
+            errors.add("The 'dbb' program was not found in DBB_HOME '" + dbbHome + "'.");
         }
-        
+
         // Check git availability
         try {
             Process process = Runtime.getRuntime().exec("git --version");
             int gitExitCode = process.waitFor();
             if (gitExitCode != 0) {
                 exitCode = 8;
-                System.err.println("[ERROR] The 'git' command is not available.");
+                errors.add("The 'git' command is not available.");
             }
         } catch (Exception e) {
             exitCode = 8;
-            System.err.println("[ERROR] The 'git' command is not available: " + e.getMessage());
+            errors.add("The 'git' command is not available: " + e.getMessage());
         }
     }
     
@@ -266,23 +270,31 @@ public class ValidateConfiguration {
             System.err.println("[ERROR] " + e.getMessage());
         }
     }
-    
+
     private void validateDb2Configuration() {
         try {
             ConfigurationUtility.validateRequiredProperty(configProperties,
                 "DBB_MODELER_DB2_METADATASTORE_JDBC_ID", "The Db2 MetadataStore User");
-            
+        } catch (IllegalArgumentException e) {
+            exitCode = 8;
+            errors.add(e.getMessage());
+        }
+        try {
             ConfigurationUtility.validateFileProperty(configProperties,
                 "DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE", "The Db2 Connection configuration file");
-            
+        } catch (IllegalArgumentException e) {
+            exitCode = 8;
+            errors.add(e.getMessage());
+        }
+        try {
             ConfigurationUtility.validateFileProperty(configProperties,
                 "DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE", "The Db2 MetadataStore Password File");
         } catch (IllegalArgumentException e) {
             exitCode = 8;
-            System.err.println("[ERROR] " + e.getMessage());
+            errors.add(e.getMessage());
         }
     }
-    
+
     private void validateFileMetadataStore() {
         try {
             ConfigurationUtility.validateRequiredProperty(configProperties,
@@ -290,18 +302,21 @@ public class ValidateConfiguration {
                 "The location of the DBB File-based MetadataStore");
         } catch (IllegalArgumentException e) {
             exitCode = 8;
-            System.err.println("[ERROR] " + e.getMessage());
+            errors.add(e.getMessage());
         }
     }
-    
+
     private void validateArtifactRepository() {
         try {
             ConfigurationUtility.validateRequiredProperty(configProperties,
                 "ARTIFACT_REPOSITORY_SERVER_URL", "The URL of the Artifact Repository Server");
-            
-            String serverUrl = configProperties.getProperty("ARTIFACT_REPOSITORY_SERVER_URL");
-            
-            // Check if server is reachable
+        } catch (IllegalArgumentException e) {
+            exitCode = 8;
+            errors.add(e.getMessage());
+        }
+
+        String serverUrl = configProperties.getProperty("ARTIFACT_REPOSITORY_SERVER_URL");
+        if (serverUrl != null && !serverUrl.trim().isEmpty()) {
             try {
                 URL url = new URL(serverUrl);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -309,40 +324,47 @@ public class ValidateConfiguration {
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
                 int responseCode = connection.getResponseCode();
-                
                 if (responseCode != 200 && responseCode != 302) {
                     exitCode = 8;
-                    System.err.println("[ERROR] The Artifact Repository Server '" + serverUrl +
+                    errors.add("The Artifact Repository Server '" + serverUrl +
                         "' is not reachable. HTTP response code: " + responseCode);
                 }
             } catch (Exception e) {
                 exitCode = 8;
-                System.err.println("[ERROR] The Artifact Repository Server '" + serverUrl +
+                errors.add("The Artifact Repository Server '" + serverUrl +
                     "' is not reachable: " + e.getMessage());
             }
-            
+        }
+
+        try {
             ConfigurationUtility.validateRequiredProperty(configProperties,
                 "ARTIFACT_REPOSITORY_USER", "The User for the Artifact Repository Server");
-            
+        } catch (IllegalArgumentException e) {
+            exitCode = 8;
+            errors.add(e.getMessage());
+        }
+        try {
             ConfigurationUtility.validateRequiredProperty(configProperties,
                 "ARTIFACT_REPOSITORY_PASSWORD", "The Password of the User for the Artifact Repository Server");
-            
+        } catch (IllegalArgumentException e) {
+            exitCode = 8;
+            errors.add(e.getMessage());
+        }
+        try {
             ConfigurationUtility.validateRequiredProperty(configProperties,
                 "ARTIFACT_REPOSITORY_SUFFIX", "The Suffix for Artifact Repositories");
         } catch (IllegalArgumentException e) {
             exitCode = 8;
-            System.err.println("[ERROR] " + e.getMessage());
+            errors.add(e.getMessage());
         }
     }
     
     private void validateDBBToolkitVersion() {
-        validateEnvironment();
-        
         if (exitCode != 0) {
-            System.err.println("[ERROR] The DBB Toolkit's version could not be verified.");
+            errors.add("The DBB Toolkit's version could not be verified because the environment check failed.");
             return;
         }
-        
+
         try {
             // Read required version from release.properties
             Properties releaseProps = new Properties();
@@ -354,17 +376,17 @@ public class ValidateConfiguration {
             String requiredVersion = releaseProps.getProperty("Minimal-DBB-version");
             if (requiredVersion == null) {
                 exitCode = 8;
-                System.err.println("[ERROR] Unable to read Minimal-DBB-version from release.properties");
+                errors.add("Unable to read Minimal-DBB-version from release.properties");
                 return;
             }
-            
+
             // Get current DBB version
             String dbbHome = System.getenv("DBB_HOME");
             Process process = Runtime.getRuntime().exec(dbbHome + "/bin/dbb --version");
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             String currentVersion = null;
-            
+
             while ((line = reader.readLine()) != null) {
                 if (line.contains("Dependency Based Build version")) {
                     String[] parts = line.split("\\s+");
@@ -372,25 +394,25 @@ public class ValidateConfiguration {
                     break;
                 }
             }
-            
+
             process.waitFor();
-            
+
             if (currentVersion == null) {
                 exitCode = 8;
-                System.err.println("[ERROR] Unable to determine current DBB Toolkit version.");
+                errors.add("Unable to determine current DBB Toolkit version.");
                 return;
             }
-            
+
             // Compare versions
             if (!isVersionSufficient(currentVersion, requiredVersion)) {
                 exitCode = 8;
-                System.err.println("[ERROR] The DBB Toolkit's version is " + currentVersion + 
+                errors.add("The DBB Toolkit's version is " + currentVersion +
                     ". The minimal recommended version for the DBB Toolkit is " + requiredVersion + ".");
             }
-            
+
         } catch (Exception e) {
             exitCode = 8;
-            System.err.println("[ERROR] Failed to validate DBB Toolkit version: " + e.getMessage());
+            errors.add("Failed to validate DBB Toolkit version: " + e.getMessage());
         }
     }
     
