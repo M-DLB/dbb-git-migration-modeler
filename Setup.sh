@@ -15,7 +15,7 @@ DBB_MODELER_HOME=$(cd "$(dirname "$0")" && pwd)
 rc=0
 
 # Set up Java classpath
-JAR_FILE="$DBB_MODELER_HOME/build/libs/dbb-git-migration-modeler-1.0.0.jar"
+JAR_FILE="$DBB_MODELER_HOME/build/libs/dbb-git-migration-modeler-2.0.0.jar"
 LIB_DIR="$DBB_MODELER_HOME/build/libs/lib"
 
 if [ ! -f "$JAR_FILE" ]; then
