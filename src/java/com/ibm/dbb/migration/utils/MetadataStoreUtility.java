@@ -49,6 +49,29 @@ public class MetadataStoreUtility {
     }
     
     /**
+     * Verifies MetadataStore connectivity by creating a dummy build group and collection,
+     * then deleting them. Mirrors the Groovy verifyDBBMetadatastoreConnectivity() logic.
+     *
+     * @throws BuildException if any MetadataStore operation fails
+     */
+    public void verifyConnectivity() throws BuildException {
+        if (metadataStore == null) {
+            throw new IllegalStateException("MetadataStore not initialized");
+        }
+
+        System.out.println("** Verifying DBB Metadatastore connection and permissions");
+
+        Collection collection = createCollection("DummyCollection-main", "DummyCollection-main");
+        if (collection != null) {
+            System.out.println("** Successfully created the Dummy Collection and Build Group.");
+        }
+
+        deleteBuildGroup("DummyCollection-main");
+        System.out.println("** Successfully deleted the Dummy Collection and Build Group.");
+        System.out.println("** DBB MetadataStore operations successfully executed. The DBB Git Migration Modeler can be used with the provided configuration!");
+    }
+
+    /**
      * Delete a build group if it exists
      * @param name Build group name
      * @throws BuildException if deletion fails

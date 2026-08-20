@@ -290,7 +290,7 @@ public class Setup {
                 Properties db2Props = loadDb2Properties(validatedConfig.getProperty("DBB_MODELER_DB2_METADATASTORE_CONFIG_FILE"));
                 msu.initializeDb2MetadataStoreWithPasswordFile(jdbcId, passwordFile, db2Props);
             }
-            System.out.println("[INFO] DBB MetadataStore connection verified successfully.");
+            msu.verifyConnectivity();
         } catch (Exception e) {
             System.err.println("[ERROR] DBB MetadataStore check failed. Please correct the configuration and run again the Setup script. Exiting.");
             System.err.println("[ERROR] " + e.getMessage());
