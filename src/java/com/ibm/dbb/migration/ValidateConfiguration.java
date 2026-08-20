@@ -185,6 +185,9 @@ public class ValidateConfiguration {
         }
         
         if (exitCode != 0) {
+            for (String error : errors) {
+                System.err.println("[ERROR] " + error);
+            }
             System.err.println("[ERROR] Failures detected while checking the DBB Git Migration Modeler configuration. rc=" + exitCode);
             System.exit(exitCode);
         }
@@ -266,8 +269,8 @@ public class ValidateConfiguration {
         try {
             configProperties = validateAndLoadConfiguration(configFilePath);
         } catch (Exception e) {
+            // individual errors were already printed by validateAndLoadConfiguration
             exitCode = 8;
-            System.err.println("[ERROR] " + e.getMessage());
         }
     }
 
