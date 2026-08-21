@@ -265,7 +265,7 @@ public class Setup {
         // ----------------------------------------------------------------
         System.out.println("[SETUP] Validating Configuration File and finalizing Setup.");
         try {
-            ValidateConfiguration.validateAndLoadConfiguration(configFilePath);
+            ValidateConfiguration.initializeWorkDirectory(configFilePath);
         } catch (Exception e) {
             System.err.println("[ERROR] Configuration check failed. Please correct the configuration and run again the Setup script. Exiting.");
             System.err.println("[ERROR] " + e.getMessage());

@@ -254,8 +254,28 @@ public class ValidateConfiguration {
     }
 
     // -----------------------------------------------------------------------
-    // Work directory initialization (was private instance method)
+    // Work directory initialization
     // -----------------------------------------------------------------------
+
+    /**
+     * Validates the configuration file and finalizes setup by creating work
+     * directories and copying sample files into them.
+     * Equivalent to calling 0-validateConfiguration.sh -f <configFile>.
+     *
+     * @param configFilePath Path to the configuration file
+     * @throws Exception if validation or directory initialization fails
+     */
+    public static void initializeWorkDirectory(String configFilePath) throws Exception {
+        ValidationContext ctx = new ValidationContext();
+        initializeWorkDirectory(ctx, configFilePath);
+        if (ctx.hasErrors()) {
+            StringBuilder sb = new StringBuilder();
+            for (String error : ctx.errors) {
+                sb.append("\n  - ").append(error);
+            }
+            throw new Exception("Setup finalization failed with " + ctx.errors.size() + " error(s):" + sb);
+        }
+    }
 
     private static void initializeWorkDirectory(ValidationContext ctx, String configFilePath) {
         Properties configProperties;
