@@ -65,13 +65,15 @@ public class ValidateConfiguration {
         validator.modelerHome = configProperties.getProperty("DBB_MODELER_HOME");
         if (validator.modelerHome == null || validator.modelerHome.isEmpty()) {
             validator.errors.add("DBB_MODELER_HOME property is not defined in the configuration file");
+            validator.exitCode = 8;
         }
 
         // Validate environment
         validator.validateEnvironment();
 
-        // Validate DBB Toolkit version (only if environment is valid)
-        if (validator.exitCode == 0) {
+        // Validate DBB Toolkit version (skip only if DBB_HOME is missing, since it is required to run the version check)
+        if (System.getenv("DBB_HOME") != null && !System.getenv("DBB_HOME").isEmpty()
+                && validator.modelerHome != null && !validator.modelerHome.isEmpty()) {
             validator.validateDBBToolkitVersion();
         }
 
@@ -363,11 +365,6 @@ public class ValidateConfiguration {
     }
     
     private void validateDBBToolkitVersion() {
-        if (exitCode != 0) {
-            errors.add("The DBB Toolkit's version could not be verified because the environment check failed.");
-            return;
-        }
-
         try {
             // Read required version from release.properties
             Properties releaseProps = new Properties();
