@@ -247,12 +247,18 @@ public class MigrationOrchestrator {
             System.out.println("Extract applications using Java implementation");
             System.out.println("*******************************************************************");
             
+            String logsDir = config.getProperty("DBB_MODELER_LOGS");
+
             List<String> args = new ArrayList<>();
             args.add("-c");
             args.add(configFile);
             if (applicationFilter != null && !applicationFilter.isEmpty()) {
                 args.add("-a");
                 args.add(applicationFilter);
+            }
+            if (logsDir != null) {
+                args.add("-l");
+                args.add(logsDir + "/1-extractApplications.log");
             }
             
             ExtractApplications.main(args.toArray(new String[0]));
