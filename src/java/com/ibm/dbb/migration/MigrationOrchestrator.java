@@ -172,10 +172,8 @@ public class MigrationOrchestrator {
     
     private boolean validateConfiguration() {
         System.out.println("[PHASE] Validating configuration");
-        
-        String[] args = {"-c", configFile};
         try {
-            ValidateConfiguration.main(args);
+            ValidateConfiguration.validateAndLoadConfiguration(configFile);
             return true;
         } catch (Exception e) {
             System.err.println("[ERROR] Configuration validation failed: " + e.getMessage());

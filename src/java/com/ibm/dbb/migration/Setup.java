@@ -253,8 +253,7 @@ public class Setup {
         // ----------------------------------------------------------------
         System.out.println("[SETUP] Validating environment.");
         try {
-            ValidateConfiguration envValidator = new ValidateConfiguration();
-            envValidator.run(new String[]{"-e"});
+            ValidateConfiguration.validateEnvironment();
         } catch (Exception e) {
             System.err.println("[ERROR] Environment check failed. Please correct the environment and run again the Setup script. Exiting.");
             System.err.println("[ERROR] " + e.getMessage());
