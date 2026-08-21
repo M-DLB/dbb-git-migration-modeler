@@ -645,7 +645,7 @@ public class InitApplicationRepository {
             logger.logMessage("** Preview Build of application '" + appName + "' completed successfully. rc=" + exitCode);
         } else {
             logger.logMessage("*! [ERROR] Preview Build of application '" + appName + "' failed. rc=" + exitCode);
-            logger.logMessage("** Build logs and reports available at '" + LogFile + "' and '" + appLogDir.getAbsolutePath() + "'");
+            logger.logMessage("** Build logs and reports available at '" + logFile + "' and '" + appLogDir.getAbsolutePath() + "'");
         }
     }
     
