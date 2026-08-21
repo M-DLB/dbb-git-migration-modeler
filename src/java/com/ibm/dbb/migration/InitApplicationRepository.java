@@ -214,6 +214,11 @@ public class InitApplicationRepository {
             
             if (exitCode != 0) return;
             
+            // Create .gitignore file
+            createGitIgnore(appRepoDir);
+            
+            if (exitCode != 0) return;
+            
             // Copy and customize ZAPP file
             customizeZappFile(appRepoDir, appName, logFile);
             
@@ -331,6 +336,20 @@ public class InitApplicationRepository {
         executeCommand(command, directory, logFile);
     }
     
+    private void createGitIgnore(File appRepoDir) throws IOException {
+        logger.logMessage("** Create file '.gitignore'");
+
+        File gitIgnoreFile = new File(appRepoDir, ".gitignore");
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(gitIgnoreFile, "UTF-8"))) {
+            writer.println("# Ignore logs folder");
+            writer.println("logs/");
+        }
+        com.ibm.dbb.utils.FileUtils.setFileTag(gitIgnoreFile.getAbsolutePath(), "UTF-8");
+
+        logger.logSilentMessage("[CMD] Created " + gitIgnoreFile.getAbsolutePath());
+    }
+
     private void copyGitAttributes(File appRepoDir, String logFile) throws IOException {
         logger.logMessage("** Update Git configuration file '.gitattributes'");
         
