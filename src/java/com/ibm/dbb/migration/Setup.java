@@ -311,7 +311,7 @@ public class Setup {
         System.out.println("  - " + config.getProperty("TYPE_CONFIGURATIONS_FILE") + " (optional)");
         System.out.println();
         System.out.println("Once tailored, run the following command:");
-        System.out.println("  java -cp <classpath> com.ibm.dbb.migration.MigrationOrchestrator -c " + configFilePath);
+        System.out.println("  " + modelerHome + "/Migration-Modeler-Start.sh -c " + configFilePath);
 
         return 0;
     }
