@@ -613,8 +613,7 @@ public class InitApplicationRepository {
         logger.logMessage("** Preview Build of application '" + appName + "' started");
         
         // Create application log directory
-        File appLogDir = new File(logsDir, appName);
-        appLogDir.mkdirs();
+        File appLogDir = new File(appRepoDir, "logs");
         
         // Only zBuilder is supported
         String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
