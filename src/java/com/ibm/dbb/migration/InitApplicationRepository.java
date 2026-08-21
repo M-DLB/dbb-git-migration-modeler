@@ -341,7 +341,7 @@ public class InitApplicationRepository {
 
         File gitIgnoreFile = new File(appRepoDir, ".gitignore");
 
-        try (PrintWriter writer = new PrintWriter(new FileWriter(gitIgnoreFile, "UTF-8"))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(gitIgnoreFile, java.nio.charset.StandardCharsets.UTF_8))) {
             writer.println("# Ignore logs folder");
             writer.println("logs/");
         }
