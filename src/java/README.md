@@ -1,35 +1,52 @@
-# ExtractApplications - Java Conversion
+# DBB Git Migration Modeler — Java Implementation
 
-This directory contains the Java conversion of the original `extractApplications.groovy` script.
+This directory contains the Java implementation of the DBB Git Migration Modeler.
 
 ## Overview
 
-The `ExtractApplications` Java application extracts applications from mainframe datasets and generates application configuration files for the DBB Git Migration Modeler. This is a standalone Java executable that replaces the Groovy script with equivalent Java functionality.
+The DBB Git Migration Modeler is a Java application that extracts applications from mainframe datasets, migrates source files to z/OS UNIX System Services folders, assesses cross-application dependencies, generates build configurations, and initializes Git repositories.
+
+All phases of the migration workflow are implemented as Java classes coordinated by the `MigrationOrchestrator` class. The application is invoked through the shell scripts at the root of the repository.
 
 ## Project Structure
 
 ```
 src/java/
-├── com/ibm/dbb/migration/
-│   ├── ExtractApplications.java          # Main executable class
-│   ├── model/                             # Data model classes
-│   │   ├── ApplicationDescriptor.java
-│   │   ├── ApplicationMappingConfiguration.java
-│   │   ├── RepositoryPathsMapping.java
-│   │   └── TypesMapping.java
-│   └── utils/                             # Utility classes
-│       ├── ApplicationDescriptorUtils.java
-│       └── Logger.java
+└── com/ibm/dbb/migration/
+    ├── MigrationOrchestrator.java          # Main entry point — coordinates all phases
+    ├── Setup.java                          # Interactive setup wizard
+    ├── ValidateConfiguration.java          # Phase 0: configuration validation
+    ├── ExtractApplications.java            # Phase 1: extract applications from datasets
+    ├── MigrateDatasets.java                # Phase 2: migrate members from MVS to USS
+    ├── ScanApplication.java                # Phase 3a: scan application files with DBB scanner
+    ├── AssessUsage.java                    # Phase 3b: assess Include File and Program usage
+    ├── GenerateZBuilderProperties.java     # Phase 4: generate zBuilder build properties
+    ├── InitApplicationRepository.java      # Phase 5: initialize Git repositories
+    ├── CalculateDependenciesOrder.java     # Summary: calculate application dependency order
+    ├── model/                              # Data model classes
+    │   ├── ApplicationDescriptor.java
+    │   ├── ApplicationMappingConfiguration.java
+    │   ├── RepositoryPathsMapping.java
+    │   └── TypesMapping.java
+    └── utils/                              # Utility classes
+        ├── ApplicationDescriptorRepresenter.java
+        ├── ApplicationDescriptorUtils.java
+        ├── ConfigurationUtility.java
+        ├── FileUtility.java
+        ├── Logger.java
+        ├── MetadataStoreUtility.java
+        └── ZappUtility.java
 ```
 
 ## Key Features
 
-- **Standalone Java Application**: No Groovy runtime required
-- **Command-line Interface**: Same arguments as the original Groovy script
+- **Pure Java**: No Groovy runtime required — runs on a standard Java JVM
+- **Single JAR deployment**: All phases bundled into one JAR file
+- **Command-line Interface**: Consistent `-c`, `-a`, `-l` arguments across all classes
 - **YAML Support**: Uses SnakeYAML for parsing configuration files
-- **z/OS Integration**: Maintains full JZOS and ZFile support
-- **DBB Scanner Integration**: Supports file classification via DMH scanner
-- **Logging**: File and console logging capabilities
+- **z/OS Integration**: Full JZOS and ZFile support for dataset access
+- **DBB Scanner Integration**: Supports file classification via DBB scanner
+- **Logging**: Per-phase log files written to `DBB_MODELER_LOGS`
 
 ## Prerequisites
 
@@ -37,44 +54,30 @@ src/java/
 2. **Gradle** (wrapper included, no installation required)
 3. **z/OS Environment** with:
    - IBM JZOS libraries
-   - IBM DBB installation
-   - IBM DMH Scanner libraries
+   - IBM DBB installation (3.0.4.1 or later)
 
 ## Key Libraries
 
-- **Apache Commons CLI 1.5.0**: Command-line argument parsing (same as Groovy script)
+- **Apache Commons CLI 1.5.0**: Command-line argument parsing
 - **SnakeYAML 2.0**: YAML configuration file parsing
 
 ## Building the Application
 
 ### Using Gradle (Recommended)
 
-The project includes Gradle Wrapper, so you don't need to install Gradle separately.
+The project includes a Gradle Wrapper, so no separate Gradle installation is required.
 
 ```bash
-# Build the project (Unix/Linux/macOS)
+# Build the project (Unix/Linux/z/OS)
 ./gradlew clean build --no-daemon
 
 # Build the project (Windows)
 gradlew.bat clean build --no-daemon
-
-# Or use the build script (automatically uses --no-daemon)
-./src/java/build.sh
-
-# This creates:
-# - build/libs/dbb-git-migration-modeler-1.0.0.jar (main JAR)
-# - build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar (fat JAR)
-# - build/libs/lib/ (runtime dependencies)
 ```
 
-### Build Outputs
-
-- **Main JAR**: `build/libs/dbb-git-migration-modeler-1.0.0.jar`
-  - Requires dependencies in classpath
-  
-- **Fat JAR**: `build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar`
-  - Includes all runtime dependencies (except provided scope)
-  - Recommended for deployment
+This creates:
+- `build/libs/dbb-git-migration-modeler-2.0.0.jar` — thin JAR (requires classpath)
+- `build/libs/lib/` — runtime dependencies
 
 ### Gradle Tasks
 
@@ -88,125 +91,89 @@ gradlew.bat clean build --no-daemon
 # Build JAR files
 ./gradlew build --no-daemon
 
-# Display project information
+# Display project information and usage examples
 ./gradlew info --no-daemon
-
-# List all available tasks
-./gradlew tasks --no-daemon
 ```
 
-**Note**: The `--no-daemon` flag is used to prevent daemon processes, which is recommended for z/OS and CI/CD environments.
+> **Note**: The `--no-daemon` flag is recommended for z/OS and CI/CD environments.
 
 ## Running the Application
 
-### Command-line Syntax
+### Recommended: Use the shell scripts
+
+The easiest way to run the application is through the provided shell scripts at the repository root:
 
 ```bash
-java -cp <classpath> com.ibm.dbb.migration.ExtractApplications [options]
+# Run the full migration workflow
+./Migration-Modeler-Start.sh -c /path/to/config.properties
+
+# Run with an application filter
+./Migration-Modeler-Start.sh -c /path/to/config.properties -a "APP1,APP2"
+
+# Run setup interactively
+./Setup.sh
 ```
 
-### Options
+### Direct Java invocation
+
+```bash
+java -cp "build/libs/dbb-git-migration-modeler-2.0.0.jar:build/libs/lib/*:$DBB_HOME/lib/*" \
+  com.ibm.dbb.migration.MigrationOrchestrator \
+  -c /path/to/config.properties
+```
+
+### Options for MigrationOrchestrator
 
 | Option | Long Form | Required | Description |
 |--------|-----------|----------|-------------|
 | `-c` | `--configFile` | Yes | Path to the DBB Git Migration Modeler Configuration file |
-| `-a` | `--applications` | No | Comma-separated list of applications to extract |
+| `-a` | `--applications` | No | Comma-separated list of applications to process |
+| `-h` | `--help` | No | Display help message |
+
+### Running individual phases
+
+Each phase class can also be invoked independently. All phase classes support:
+
+| Option | Long Form | Required | Description |
+|--------|-----------|----------|-------------|
+| `-c` | `--configFile` | Yes | Path to the DBB Git Migration Modeler Configuration file |
+| `-a` | `--applications` | No | Comma-separated list of applications to process (where applicable) |
 | `-l` | `--logFile` | No | Relative or absolute path to an output log file |
 | `-h` | `--help` | No | Display help message |
 
-### Example Usage
-
 ```bash
-# Extract all applications
-java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*" \
+# Example: run Extract Applications phase only
+java -cp "build/libs/dbb-git-migration-modeler-2.0.0.jar:build/libs/lib/*:$DBB_HOME/lib/*" \
   com.ibm.dbb.migration.ExtractApplications \
   -c /path/to/config.properties \
-  -l /path/to/extract.log
-
-# Extract specific applications
-java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*" \
-  com.ibm.dbb.migration.ExtractApplications \
-  -c /path/to/config.properties \
-  -a "APP1,APP2,APP3" \
-  -l /path/to/extract.log
+  -l /path/to/logs/1-extractApplications.log
 ```
-
-### z/OS Execution
-
-On z/OS, you'll need to set up the Java environment properly:
-
-```bash
-# Set Java home
-export JAVA_HOME=/usr/lpp/java/J8.0_64
-
-# Set DBB home
-export DBB_HOME=/var/dbb
-
-# Set classpath
-export CLASSPATH="build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*"
-
-# Run the application
-java com.ibm.dbb.migration.ExtractApplications \
-  -c /u/config/migration.properties \
-  -l /u/logs/extract.log
-```
-
-## Configuration File
-
-The configuration file should contain the following properties:
-
-```properties
-# Required directories
-DBB_MODELER_APPCONFIG_DIR=/path/to/config
-DBB_MODELER_APPMAPPINGS_DIR=/path/to/mappings
-DBB_MODELER_APPLICATION_DIR=/path/to/applications
-
-# Required files
-REPOSITORY_PATH_MAPPING_FILE=/path/to/repositoryPathsMapping.yaml
-APPLICATION_TYPES_MAPPING=/path/to/typesMapping.yaml
-
-# Optional settings
-SCAN_DATASET_MEMBERS=false
-SCAN_DATASET_MEMBERS_ENCODING=IBM-1047
-APPLICATION_DEFAULT_BRANCH=main
-```
-
-## Differences from Groovy Version
-
-### Advantages
-
-1. **No Groovy Runtime**: Runs on standard Java JVM
-2. **Better Performance**: Compiled Java code is generally faster
-3. **Type Safety**: Compile-time type checking
-4. **IDE Support**: Better tooling and debugging support
-5. **Easier Deployment**: Single JAR file deployment
-
-### Compatibility
-
-- **100% Functional Compatibility**: All features from the Groovy script are preserved
-- **Same Command-line Interface**: Drop-in replacement for the Groovy script
-- **Same Configuration Format**: Uses identical configuration files
-- **Same Output Format**: Generates identical application descriptors and mapping files
 
 ## Dependencies
 
-### Runtime Dependencies (included in fat JAR)
+### Runtime Dependencies (included in build output under `build/libs/lib/`)
 
 - **SnakeYAML 2.0**: YAML parsing
 
-### Provided Dependencies (must be in classpath)
+### Provided Dependencies (must be in classpath at runtime)
 
-- **IBM JZOS**: z/OS file operations
-- **IBM DBB**: Build framework utilities
-- **IBM DMH Scanner**: File classification
+- **IBM JZOS**: z/OS file and dataset operations
+- **IBM DBB**: Build framework utilities and scanner
 
 ## Troubleshooting
+
+### JAR file not found
+
+Run the build before executing:
+```bash
+./gradlew clean build --no-daemon
+```
 
 ### ClassNotFoundException
 
 Ensure all required libraries are in the classpath:
 ```bash
-export CLASSPATH="app.jar:$DBB_HOME/lib/*:$JZOS_HOME/lib/*"
+export CLASSPATH="build/libs/dbb-git-migration-modeler-2.0.0.jar:build/libs/lib/*:$DBB_HOME/lib/*"
 ```
 
 ### UnsupportedEncodingException
@@ -220,42 +187,7 @@ Verify that:
 - Dataset names are valid and accessible
 - User has appropriate permissions
 
-## Migration from Groovy
-
-To migrate from the Groovy script to the Java version:
-
-1. **Build the Java application**:
-   ```bash
-   ./gradlew clean build
-   # or
-   ./src/java/build.sh
-   ```
-
-2. **Update your shell scripts** to use Java instead of Groovy:
-   ```bash
-   # Old (Groovy)
-   $DBB_HOME/bin/groovyz src/groovy/extractApplications.groovy -c config.properties
-   
-   # New (Java)
-   java -cp "build/libs/dbb-git-migration-modeler-1.0.0-jar-with-dependencies.jar:$DBB_HOME/lib/*" \
-     com.ibm.dbb.migration.ExtractApplications -c config.properties
-   
-   # Or use the wrapper script
-   ./src/java/run-extract-applications.sh -c config.properties
-   ```
-
-3. **Test with a small dataset** to verify functionality
-
-4. **Deploy to production** once validated
-
-## Support
-
-For issues or questions:
-- Review the original Groovy script documentation
-- Check the DBB Git Migration Modeler documentation
-- Verify all dependencies are properly configured
-
 ## License
 
-Licensed Materials - Property of IBM
-(c) Copyright IBM Corporation 2018, 2024. All Rights Reserved.
+Licensed Materials - Property of IBM  
+(c) Copyright IBM Corporation 2018, 2025. All Rights Reserved.
