@@ -65,17 +65,40 @@ src/java/
 
 ## Building the Application
 
-### Using Gradle (Recommended)
+### Option 1: Using the Gradle Wrapper
 
 The project includes a Gradle Wrapper, so no separate Gradle installation is required.
 
 ```bash
 # Build the project (Unix/Linux/z/OS)
-./gradlew clean build --no-daemon
+./gradlew clean build
 
 # Build the project (Windows)
-gradlew.bat clean build --no-daemon
+gradlew.bat clean build
 ```
+
+### Option 2: Using an Installed Gradle on z/OS (Without Wrapper)
+
+If using a pre-installed Gradle installation on z/OS:
+
+1. Configure environment variables in your shell profile or session:
+   ```bash
+   export JAVA_HOME=/usr/lpp/java/J8.0_64           # Path to IBM Semeru / 64-bit Java SDK
+   export GRADLE_HOME=/usr/lpp/gradle/gradle-8.5   # Path to installed Gradle
+   export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
+   export _BPXK_AUTOCVT=ON
+   export _TAG_REDIR_IN=TXT
+   export _TAG_REDIR_OUT=TXT
+   export _TAG_REDIR_ERR=TXT
+
+   # Bind Gradle daemon communication explicitly to the local loopback interface (required on z/OS when using Gradle daemon)
+   export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.1
+   ```
+
+2. Invoke Gradle directly:
+   ```bash
+   gradle clean build
+   ```
 
 This creates:
 - `build/libs/dbb-git-migration-modeler-2.0.0.jar` — thin JAR (requires classpath)
@@ -83,21 +106,23 @@ This creates:
 
 ### Gradle Tasks
 
+Replace `./gradlew` with `gradle` if running with an installed Gradle version:
+
 ```bash
 # Clean build artifacts
-./gradlew clean --no-daemon
+./gradlew clean
 
 # Compile Java sources
-./gradlew compileJava --no-daemon
+./gradlew compileJava
 
 # Build JAR files
-./gradlew build --no-daemon
+./gradlew build
 
 # Display project information and usage examples
-./gradlew info --no-daemon
+./gradlew info
 ```
 
-> **Note**: The `--no-daemon` flag is recommended for z/OS and CI/CD environments.
+> **Note**: On z/OS, ensure `GRADLE_DAEMON_BIND_ADDRESS=127.0.0.1` is exported when using the Gradle daemon. If you prefer running without the daemon, pass `--no-daemon`.
 
 ## Running the Application
 

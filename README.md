@@ -27,13 +27,40 @@ An additional script is available for refreshing Application Descriptor files fo
 
 ## Building the application
 
-Before running the DBB Git Migration Modeler, build the JAR file using the included Gradle wrapper:
+### Option 1: Using the Gradle Wrapper (Recommended)
 
 ```bash
-./gradlew clean build --no-daemon
+./gradlew clean build
 ```
 
-This produces the JAR file at `build/libs/dbb-git-migration-modeler-2.0.0.jar` along with its runtime dependencies in `build/libs/lib/`.
+### Option 2: Using an Installed Gradle on z/OS (Without Gradle Wrapper)
+
+If using a pre-installed Gradle on z/OS instead of the wrapper:
+
+1. Ensure `JAVA_HOME` and `GRADLE_HOME` are set, and `gradle` is added to `PATH`:
+   ```bash
+   export JAVA_HOME=/usr/lpp/java/J8.0_64   # adjust to your Java installation path
+   export GRADLE_HOME=/usr/lpp/gradle/gradle-8.5  # adjust to your Gradle installation path
+   export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
+   ```
+
+2. Set environment variables for encoding/conversion and daemon network binding:
+   ```bash
+   export _BPXK_AUTOCVT=ON
+   export _TAG_REDIR_IN=TXT
+   export _TAG_REDIR_OUT=TXT
+   export _TAG_REDIR_ERR=TXT
+
+   # Bind Gradle daemon communication explicitly to the local loopback interface (required on z/OS when using Gradle daemon)
+   export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.1
+   ```
+
+3. Run Gradle directly:
+   ```bash
+   gradle clean build
+   ```
+
+Both options produce the JAR file at `build/libs/dbb-git-migration-modeler-2.0.0.jar` along with its runtime dependencies in `build/libs/lib/`.
 
 ## Required setup and configuration
 
