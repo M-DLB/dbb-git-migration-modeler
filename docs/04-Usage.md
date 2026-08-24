@@ -660,17 +660,15 @@ To reflect these changes, the **Application Descriptor** file needs to be refres
 
 Additionally, if applications are already migrated to Git and use pipelines, but don't have an Application Descriptor file yet, and the development teams want to leverage its benefits, this creation process should be followed.
 
-A second command is shipped for this workflow. The [Refresh Application Descriptor script](../src/scripts/Refresh-Application-Descriptor-Files.sh) facilitates the refresh process by rescanning the source code, initializing new or resetting the Application Descriptor files, and performing the assessment phase for all applications. The refresh of the Application Descriptor files must occur on the entire code base like on the initial assessment process.
-
-> **Note**: The `Refresh-Application-Descriptor-Files.sh` script still uses Groovy-based invocations of DBB scripts for the scan, recreate, and assess phases. A `DBB_HOME` environment variable pointing to a valid DBB installation is required for this script.
+A second command is shipped for this workflow. The [Refresh Application Descriptor script](../Refresh-Application-Descriptor-Files.sh) facilitates the refresh process by rescanning the source code, initializing new or resetting the Application Descriptor files, and performing the assessment phase for all applications. The refresh of the Application Descriptor files must occur on the entire code base like on the initial assessment process.
 
 Like the other scripts, it requires the path to the DBB Git Migration Modeler configuration file as parameter. This configuration file can be created with the [Setup](./02-Setup.md#setting-up-the-dbb-git-migration-modeler-configuration) instructions.
 
-An additional parameter can be passed to the [Refresh Application Descriptor script](../src/scripts/Refresh-Application-Descriptor-Files.sh) to specify a list of applications.
+An additional parameter can be passed to the [Refresh Application Descriptor script](../Refresh-Application-Descriptor-Files.sh) to specify a list of applications.
 This list can be used to filter down the applications to process during the migration. Through the `-a` parameter, the user can specify a comma-separated list of applications, for which the migration will be performed.
 This parameter can be used to limit the scope of the refresh process to applications that require a new Application Descriptor file, even if other applications are available in the workspace. This filtering capability can help in a phased migration approach, to successively target individual applications.
 
-The script calls three steps (`scanApplication`, `recreateApplicationDescriptor` and `assessUsage`) to scan the files of the applications using the DBB Scanner, initialize Application Descriptor files based on the files present in the working directories, and assess how Include Files and Programs are used across the applications landscape:
+The script invokes the `RefreshApplicationDescriptorOrchestrator` Java class, which coordinates three phases (`ScanApplication`, `RecreateApplicationDescriptor` and `AssessUsage`) to scan the files of the applications using the DBB Scanner, initialize Application Descriptor files based on the files present in the working directories, and assess how Include Files and Programs are used across the applications landscape:
 
    * For the scanning phase, the script iterates through the files located within applications' subfolder in the `DBB_MODELER_APPLICATION_DIR` folder.
    It uses the DBB Scanner to understand the dependencies for each artifact.
@@ -698,7 +696,7 @@ The recommendation would be to set up a pipeline, that checks out all Git reposi
   <summary>Output example</summary>
 Execution of command:
 	
-`./src/scripts/Refresh-Application-Descriptor-Files.sh -c /u/mdalbin/Migration-Modeler-DBEHM-work/DBB_GIT_MIGRATION_MODELER.config`
+`./Refresh-Application-Descriptor-Files.sh -c /u/mdalbin/Migration-Modeler-DBEHM-work/DBB_GIT_MIGRATION_MODELER.config`
 
 Output log:
 ~~~~

@@ -13,16 +13,18 @@ All phases of the migration workflow are implemented as Java classes coordinated
 ```
 src/java/
 └── com/ibm/dbb/migration/
-    ├── MigrationOrchestrator.java          # Main entry point — coordinates all phases
-    ├── Setup.java                          # Interactive setup wizard
-    ├── ValidateConfiguration.java          # Phase 0: configuration validation
-    ├── ExtractApplications.java            # Phase 1: extract applications from datasets
-    ├── MigrateDatasets.java                # Phase 2: migrate members from MVS to USS
-    ├── ScanApplication.java                # Phase 3a: scan application files with DBB scanner
-    ├── AssessUsage.java                    # Phase 3b: assess Include File and Program usage
-    ├── GenerateZBuilderProperties.java     # Phase 4: generate zBuilder build properties
-    ├── InitApplicationRepository.java      # Phase 5: initialize Git repositories
-    ├── CalculateDependenciesOrder.java     # Summary: calculate application dependency order
+    ├── MigrationOrchestrator.java                    # Main entry point — coordinates all migration phases
+    ├── RefreshApplicationDescriptorOrchestrator.java # Entry point — coordinates the refresh workflow
+    ├── Setup.java                                    # Interactive setup wizard
+    ├── ValidateConfiguration.java                    # Phase 0: configuration validation
+    ├── ExtractApplications.java                      # Phase 1: extract applications from datasets
+    ├── MigrateDatasets.java                          # Phase 2: migrate members from MVS to USS
+    ├── ScanApplication.java                          # Phase 3a: scan application files with DBB scanner
+    ├── AssessUsage.java                              # Phase 3b: assess Include File and Program usage
+    ├── RecreateApplicationDescriptor.java            # Refresh: reset and rebuild Application Descriptor files
+    ├── GenerateZBuilderProperties.java               # Phase 4: generate zBuilder build properties
+    ├── InitApplicationRepository.java                # Phase 5: initialize Git repositories
+    ├── CalculateDependenciesOrder.java               # Summary: calculate application dependency order
     ├── model/                              # Data model classes
     │   ├── ApplicationDescriptor.java
     │   ├── ApplicationMappingConfiguration.java
@@ -109,6 +111,9 @@ The easiest way to run the application is through the provided shell scripts at 
 
 # Run with an application filter
 ./Migration-Modeler-Start.sh -c /path/to/config.properties -a "APP1,APP2"
+
+# Refresh Application Descriptor files for already-migrated applications
+./Refresh-Application-Descriptor-Files.sh -c /path/to/config.properties
 
 # Run setup interactively
 ./Setup.sh
