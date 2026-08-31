@@ -39,7 +39,7 @@ If using a pre-installed Gradle on z/OS instead of the wrapper:
 
 1. Ensure `JAVA_HOME` and `GRADLE_HOME` are set, and `gradle` is added to `PATH`:
    ```bash
-   export JAVA_HOME=/usr/lpp/java/J8.0_64   # adjust to your Java installation path
+   export JAVA_HOME=/usr/lpp/java/J21.0_64   # adjust to your Java installation path (at least 21.0.11)
    export GRADLE_HOME=/usr/lpp/gradle/gradle-8.5  # adjust to your Gradle installation path
    export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
    ```

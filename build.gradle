@@ -15,8 +15,8 @@ plugins {
 group = 'com.ibm.dbb'
 version = '2.0.0'
 
-//sourceCompatibility = '1.8'
-//targetCompatibility = '1.8'
+sourceCompatibility = '21'
+targetCompatibility = '21'
 
 // Configure source directories
 sourceSets {
