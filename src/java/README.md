@@ -88,6 +88,21 @@ Gradle will pick up any JARs placed in `build/lib/` as *provided* dependencies d
 
 ## Building the Application
 
+### Environment Variables (required for both options)
+
+Before building, configure the following environment variables in your shell profile or session:
+
+```bash
+export JAVA_HOME=/usr/lpp/java/J21.0_64           # Path to IBM Semeru / 64-bit Java SDK (at least 21.0.11)
+export _BPXK_AUTOCVT=ON
+export _TAG_REDIR_IN=TXT
+export _TAG_REDIR_OUT=TXT
+export _TAG_REDIR_ERR=TXT
+
+# Bind Gradle daemon communication explicitly to the local loopback interface (required on z/OS when using Gradle daemon)
+export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.1
+```
+
 ### Option 1: Using the Gradle Wrapper
 
 The project includes a Gradle Wrapper, so no separate Gradle installation is required.
@@ -104,18 +119,10 @@ gradlew.bat clean build
 
 If using a pre-installed Gradle installation on z/OS:
 
-1. Configure environment variables in your shell profile or session:
+1. Additionally configure the Gradle installation path:
    ```bash
-   export JAVA_HOME=/usr/lpp/java/J21.0_64           # Path to IBM Semeru / 64-bit Java SDK (at least 21.0.11)
    export GRADLE_HOME=/usr/lpp/gradle/gradle-9.5.1   # Path to installed Gradle
    export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
-   export _BPXK_AUTOCVT=ON
-   export _TAG_REDIR_IN=TXT
-   export _TAG_REDIR_OUT=TXT
-   export _TAG_REDIR_ERR=TXT
-
-   # Bind Gradle daemon communication explicitly to the local loopback interface (required on z/OS when using Gradle daemon)
-   export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.1
    ```
 
 2. Invoke Gradle directly:
