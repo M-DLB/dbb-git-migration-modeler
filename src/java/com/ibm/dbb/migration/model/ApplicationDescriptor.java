@@ -23,8 +23,8 @@ public class ApplicationDescriptor {
     private String owner;
     private List<Source> sources = new ArrayList<>();
     private List<Baseline> baselines = new ArrayList<>();
-    private List<DependencyDescriptor> dependencies;
-    private List<Consumer> consumers;
+    private List<DependencyDescriptor> dependencies = new ArrayList<>();
+    private List<Consumer> consumers = new ArrayList<>();
 
     public String getApplication() {
         return application;
