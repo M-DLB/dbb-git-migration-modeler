@@ -25,55 +25,9 @@ The utility comes with 2 primary scripts:
 An additional script is available for refreshing Application Descriptor files for applications already migrated to Git:
 * The [Refresh-Application-Descriptor-Files script](./src/scripts/Refresh-Application-Descriptor-Files.sh) can be used to refresh Application Descriptor files for applications that were already migrated to Git.
 
-## Prerequisites
+## Prerequisites and building the application
 
-The following software must be available before building the DBB Git Migration Modeler:
-
-| Requirement | Minimum Version | Notes |
-|---|---|---|
-| **Java SDK** | 21.0.11 | IBM Semeru or any OpenJDK 21-compatible distribution; 64-bit recommended on z/OS (`J21.0_64`) |
-| **Gradle** | 9.5.1 | Only required when not using the included Gradle Wrapper (Option 2 below) |
-| **IBM DBB** | 3.0.4.1 | Required at runtime; `$DBB_HOME` must point to the DBB installation directory |
-| **IBM JZOS** | — | Included with IBM Semeru on z/OS; required for dataset access |
-
-> **Note**: When using the Gradle Wrapper (`./gradlew`), no separate Gradle installation is needed. Java 21.0.11+ is the only build-time requirement.
-
-## Building the application
-
-### Option 1: Using the Gradle Wrapper (Recommended)
-
-```bash
-./gradlew clean build
-```
-
-### Option 2: Using an Installed Gradle on z/OS (Without Gradle Wrapper)
-
-If using a pre-installed Gradle on z/OS instead of the wrapper:
-
-1. Ensure `JAVA_HOME` and `GRADLE_HOME` are set, and `gradle` is added to `PATH`:
-   ```bash
-   export JAVA_HOME=/usr/lpp/java/J21.0_64   # adjust to your Java installation path (at least 21.0.11)
-   export GRADLE_HOME=/usr/lpp/gradle/gradle-9.5.1  # adjust to your Gradle installation path
-   export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
-   ```
-
-2. Set environment variables for encoding/conversion and daemon network binding:
-   ```bash
-   export _BPXK_AUTOCVT=ON
-   export _TAG_REDIR_IN=TXT
-   export _TAG_REDIR_OUT=TXT
-   export _TAG_REDIR_ERR=TXT
-
-   # Bind Gradle daemon communication explicitly to the local loopback interface (required on z/OS when using Gradle daemon)
-   export GRADLE_DAEMON_BIND_ADDRESS=127.0.0.1
-   ```
-
-3. Run Gradle directly:
-   ```bash
-   gradle clean build
-   ```
-
-Both options produce the JAR file at `build/libs/dbb-git-migration-modeler-2.0.0.jar` along with its runtime dependencies in `build/libs/lib/`.
+For prerequisites and build instructions, see the [Java implementation README](src/java/README.md).
 
 ## Required setup and configuration
 
@@ -93,6 +47,12 @@ After the execution of the [Assessment Phase](docs/01-Storyboard.md#the-assessme
 * the other applications that are consuming a service (either an Include File or a Submodule) that the given application provides
 
 The Application Descriptor files are meant to also describe the list of artifacts belonging to their application. Artifacts are classed into groups, each group represent a type of artifact (COBOL programs, COBOL copybooks, BMS maps, etc.).
+
+## Supported build frameworks
+
+The DBB Git Migration Modeler supports only the **DBB zBuilder** build framework. Support for **dbb-zAppBuild** has been removed as of this version.
+
+If you were previously using dbb-zAppBuild, you should consider moving to **DBB zBuilder** before using this version of the  DBB Git Migration Modeler. Refer to the [IBM DBB zBuilder documentation](https://www.ibm.com/docs/en/adffz/dbb/3.0.x?topic=zbuilder-getting-started) for guidance.
 
 ## Migrations scenarios for the DBB Git Migration Modeler
 

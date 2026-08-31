@@ -63,10 +63,28 @@ The following software must be available before building or running the DBB Git 
 
 > **Note**: When using the Gradle Wrapper (`./gradlew`), no separate Gradle installation is needed. Java 21.0.11+ is the only build-time requirement.
 
+> **Important**: The Java implementation of the DBB Git Migration Modeler supports only the **DBB zBuilder** build framework. The dbb-zAppBuild framework is no longer supported.
+
 ## Key Libraries
+
+The following libraries are provided by IBM — **no manual installation is required** when running on z/OS:
+
+- **IBM DBB**: Build framework utilities and scanner — provided by the DBB installation (`$DBB_HOME/lib/`)
+- **IBM JZOS**: z/OS dataset and file operations — provided by IBM Semeru (`$JAVA_HOME`), not by DBB
+
+The following libraries are resolved automatically by Gradle at build time:
 
 - **Apache Commons CLI 1.5.0**: Command-line argument parsing
 - **SnakeYAML 2.0**: YAML configuration file parsing
+
+### Building locally (off z/OS)
+
+When building on a workstation (Windows, Linux, macOS), the IBM-provided JAR files are not available from a public Maven repository and must be supplied manually:
+
+1. Copy the DBB JAR files from your z/OS DBB installation (`$DBB_HOME/lib/`) to the `build/lib/` folder in this project.
+2. Extract the JZOS JAR file (`ibmjzos.jar`) from the IBM Semeru JDK on z/OS following the procedure described in the IBM support article: [Building Java code for z/OS on other operating systems](https://www.ibm.com/support/pages/building-java-code-zos-other-operating-systems), then place it in `build/lib/` as well.
+
+Gradle will pick up any JARs placed in `build/lib/` as *provided* dependencies during compilation.
 
 ## Building the Application
 
