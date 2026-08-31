@@ -64,7 +64,6 @@ public class ApplicationDescriptorUtils {
         // Configure YAML dumper options
         DumperOptions options = new DumperOptions();
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        options.setPrettyFlow(true);
         options.setIndent(2);
 
         ApplicationDescriptorRepresenter representer = new ApplicationDescriptorRepresenter(options);
