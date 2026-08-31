@@ -48,12 +48,6 @@ public class ZappUtility {
         zapp.put("name", applicationDescriptor.getApplication());
         zapp.put("description", "ZAPP file for the " + applicationDescriptor.getApplication() + " application");
         
-        // Remove groovyz-userbuild profile (only for zAppBuild)
-        List<Map<String, Object>> profiles = (List<Map<String, Object>>) zapp.get("profiles");
-        if (profiles != null) {
-            profiles.removeIf(profile -> "groovyz-userbuild".equals(profile.get("name")));
-        }
-        
         // Add property groups for include files
         List<Map<String, Object>> propertyGroups = new ArrayList<>();
         List<ApplicationDescriptor.Source> sources = applicationDescriptor.getSources();

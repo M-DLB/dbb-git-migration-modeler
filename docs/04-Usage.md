@@ -48,13 +48,9 @@ The outcome of this phase is subfolders created in the `DBB_MODELER_APPLICATION_
 
 4. **Generate Build Properties** (`GenerateZBuilderProperties` Java class): this phase generates build properties for [DBB zBuilder](https://www.ibm.com/docs/en/adffz/dbb/3.0.x?topic=building-zos-applications-zbuilder). This step is optional, but it is highly encouraged to leverage the automatic generation of build properties, to facilitate the migration to Git.
 The phase uses the type of each artifact to generate (or reuse if already existing) Language Configurations, as configured in the [Types Configurations file](../samples/typesConfigurations.yaml).
-   * **Outputs**
-      * When using *DBB zBuilder*:
+   * **Outputs for *DBB zBuilder* configuration**:
          * The Types Configurations files turn into DBB zBuilder's Language Configuration definition files, placed into a `build-configuration` in the working directory of DBB Git Migration Modeler. These files should be reviewed by the build engineering team and integrated into the managed zBuilder instance.
          * A `dbb-app.yaml` file is created within each repository's folder in the `DBB_MODELER_APPLICATION_DIR` folder, and contains configuration to enable the use of Language Configurations. The generated `dbb-app.yaml` file also contains configuration to enable impact analysis and dependency search paths for common types of artifact (Cobol, Assembler and LinkEdit artifacts). Additional manual configuration might be required for other types of artifacts.
-      * When using *dbb-zAppBuild*:
-         * These Language Configurations files are placed into a copy of the *dbb-zAppBuild* instance pointed by the `DBB_ZAPPBUILD` variable, the copy being stored in the `DBB_MODELER_APPLICATION_DIR` folder.
-         * An **application-conf** folder is created within each application's subfolder in the `DBB_MODELER_APPLICATION_DIR` folder, and contains customized files to enable the use of the Language Configurations. A manual step needs to be performed to completely enable this configuration.
 
 5. **Initialize Application Repositories** (`InitApplicationRepository` Java class): this phase performs the following steps for each application:
    1. Initialization of the Git repository using a default `.gitattributes` file, creation of a customized `zapp.yaml` file, creation of a customized `.project` file, creation of a `baselineReference.config` file, copy of the pipeline definitions, creation of a baseline tag and commit of the changes,
@@ -513,7 +509,7 @@ The phase will search for all the applications' subfolders in the `DBB_MODELER_A
 For each application found, it will search for the artifacts of type 'Program', and, for each of them, will check if a Language Configuration exists, based on the *type* information.
 If the Language Configuration doesn't exist, it will create it.
 
-This phase will also generate application's related configuration, stored in a `config` subfolder when using DBB zBuilder or in a custom `application-conf` subfolder when using zAppBuild.
+This phase will also generate application's related configuration, stored in a `config` subfolder when using DBB zBuilder.
 If configuration was changed, an *INFO* message is shown, explaining that a manual task must be performed to enable the use of the Language Configuration mapping for a given application.
 
 <details>
