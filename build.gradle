@@ -61,21 +61,11 @@ application {
     mainClass = 'com.ibm.dbb.migration.MigrationOrchestrator'
 }
 
-// Task to copy runtime dependencies
-task copyDependencies(type: Copy) {
-    from configurations.runtimeClasspath
-    into "${buildDir}/libs/lib"
-}
-
-// Make build depend on copyDependencies
-build.dependsOn copyDependencies
-
-// Configure standard JAR task (thin JAR with classpath)
+// Configure standard JAR task
 jar {
     manifest {
         attributes(
-            'Main-Class': 'com.ibm.dbb.migration.MigrationOrchestrator',
-            'Class-Path': configurations.runtimeClasspath.collect { "lib/${it.name}" }.join(' ')
+            'Main-Class': 'com.ibm.dbb.migration.MigrationOrchestrator'
         )
     }
 }
