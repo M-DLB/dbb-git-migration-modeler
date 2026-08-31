@@ -55,7 +55,8 @@ if [ $rc -ne 0 ]; then
 fi
 
 # Set up Java classpath
-JAR_FILE="$DBB_MODELER_HOME/build/libs/dbb-git-migration-modeler-2.0.0.jar"
+MODELER_VERSION=$(grep '^Migration-Modeler-release=' "$DBB_MODELER_HOME/release.properties" | cut -d'=' -f2)
+JAR_FILE="$DBB_MODELER_HOME/build/libs/dbb-git-migration-modeler-${MODELER_VERSION}.jar"
 LIB_DIR="$DBB_MODELER_HOME/build/libs/lib"
 
 if [ ! -f "$JAR_FILE" ]; then
