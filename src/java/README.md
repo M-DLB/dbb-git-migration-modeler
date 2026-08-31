@@ -52,11 +52,16 @@ src/java/
 
 ## Prerequisites
 
-1. **Java 21 or higher** (at least version 21.0.11)
-2. **Gradle** (wrapper included, no installation required)
-3. **z/OS Environment** with:
-   - IBM JZOS libraries
-   - IBM DBB installation (3.0.4.1 or later)
+The following software must be available before building or running the DBB Git Migration Modeler:
+
+| Requirement | Minimum Version | Notes |
+|---|---|---|
+| **Java SDK** | 21.0.11 | IBM Semeru or any OpenJDK 21-compatible distribution; 64-bit recommended on z/OS (`J21.0_64`) |
+| **Gradle** | 9.5.1 | Only required when not using the included Gradle Wrapper (Option 2 below) |
+| **IBM DBB** | 3.0.4.1 | Required at runtime; `$DBB_HOME` must point to the DBB installation directory |
+| **IBM JZOS** | — | Included with IBM Semeru on z/OS; required for dataset access at runtime |
+
+> **Note**: When using the Gradle Wrapper (`./gradlew`), no separate Gradle installation is needed. Java 21.0.11+ is the only build-time requirement.
 
 ## Key Libraries
 
@@ -84,7 +89,7 @@ If using a pre-installed Gradle installation on z/OS:
 1. Configure environment variables in your shell profile or session:
    ```bash
    export JAVA_HOME=/usr/lpp/java/J21.0_64           # Path to IBM Semeru / 64-bit Java SDK (at least 21.0.11)
-   export GRADLE_HOME=/usr/lpp/gradle/gradle-8.5   # Path to installed Gradle
+   export GRADLE_HOME=/usr/lpp/gradle/gradle-9.5.1   # Path to installed Gradle
    export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
    export _BPXK_AUTOCVT=ON
    export _TAG_REDIR_IN=TXT

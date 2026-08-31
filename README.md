@@ -25,6 +25,19 @@ The utility comes with 2 primary scripts:
 An additional script is available for refreshing Application Descriptor files for applications already migrated to Git:
 * The [Refresh-Application-Descriptor-Files script](./src/scripts/Refresh-Application-Descriptor-Files.sh) can be used to refresh Application Descriptor files for applications that were already migrated to Git.
 
+## Prerequisites
+
+The following software must be available before building the DBB Git Migration Modeler:
+
+| Requirement | Minimum Version | Notes |
+|---|---|---|
+| **Java SDK** | 21.0.11 | IBM Semeru or any OpenJDK 21-compatible distribution; 64-bit recommended on z/OS (`J21.0_64`) |
+| **Gradle** | 9.5.1 | Only required when not using the included Gradle Wrapper (Option 2 below) |
+| **IBM DBB** | 3.0.4.1 | Required at runtime; `$DBB_HOME` must point to the DBB installation directory |
+| **IBM JZOS** | — | Included with IBM Semeru on z/OS; required for dataset access |
+
+> **Note**: When using the Gradle Wrapper (`./gradlew`), no separate Gradle installation is needed. Java 21.0.11+ is the only build-time requirement.
+
 ## Building the application
 
 ### Option 1: Using the Gradle Wrapper (Recommended)
@@ -40,7 +53,7 @@ If using a pre-installed Gradle on z/OS instead of the wrapper:
 1. Ensure `JAVA_HOME` and `GRADLE_HOME` are set, and `gradle` is added to `PATH`:
    ```bash
    export JAVA_HOME=/usr/lpp/java/J21.0_64   # adjust to your Java installation path (at least 21.0.11)
-   export GRADLE_HOME=/usr/lpp/gradle/gradle-8.5  # adjust to your Gradle installation path
+   export GRADLE_HOME=/usr/lpp/gradle/gradle-9.5.1  # adjust to your Gradle installation path
    export PATH=$GRADLE_HOME/bin:$JAVA_HOME/bin:$PATH
    ```
 
