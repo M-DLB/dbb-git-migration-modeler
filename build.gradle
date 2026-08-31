@@ -13,10 +13,9 @@ plugins {
 }
 
 group = 'com.ibm.dbb'
-version = '2.0.0'
-
-sourceCompatibility = '21'
-targetCompatibility = '21'
+def releaseProps = new Properties()
+file('release.properties').withInputStream { releaseProps.load(it) }
+version = releaseProps['Migration-Modeler-release']
 
 // Configure source directories
 sourceSets {
