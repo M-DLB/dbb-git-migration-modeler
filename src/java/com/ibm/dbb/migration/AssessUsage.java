@@ -959,11 +959,15 @@ public class AssessUsage {
      */
     private String computeTargetRepositoryPath(String sourceGroupName, String owningApplication,
                                               String targetApplicationComponent) {
+        // Strip component prefix (e.g. "COMP1:copy" -> "copy") before looking up in mapping
+        String[] sourceGroupParts = sourceGroupName.split(":");
+        String baseSourceGroup = sourceGroupParts.length == 2 ? sourceGroupParts[1] : sourceGroupName;
+
         // Find repository configuration for the source group
         RepositoryPathsMapping.RepositoryPath repoPathConfig = null;
         if (repositoryPathsMapping != null && repositoryPathsMapping.getRepositoryPaths() != null) {
             for (RepositoryPathsMapping.RepositoryPath repoMapping : repositoryPathsMapping.getRepositoryPaths()) {
-                if (repoMapping.getSourceGroup().equals(sourceGroupName)) {
+                if (repoMapping.getSourceGroup().equals(baseSourceGroup)) {
                     repoPathConfig = repoMapping;
                     break;
                 }
@@ -971,15 +975,13 @@ public class AssessUsage {
         }
         
         if (repoPathConfig != null) {
-            // Expand application component variables
             String targetPath = repoPathConfig.getRepositoryPath()
-                .replaceAll("\\$application", owningApplication)
                 .replaceAll("\\$component", targetApplicationComponent != null ? targetApplicationComponent : "")
-                .replaceAll("//", "/");
+                .replaceAll("^/", "");
             return targetPath;
         }
         
-        return sourceGroupName; // Fallback to source group name
+        return baseSourceGroup; // Fallback to base source group name
     }
     
     /**

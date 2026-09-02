@@ -468,16 +468,11 @@ public class ExtractApplications {
                 languageProcessor = matchingRepositoryPath.getLanguageProcessor() != null ? 
                     matchingRepositoryPath.getLanguageProcessor() : lastQualifier + ".groovy";
                 
-                targetRepositoryPath = matchingRepositoryPath.getRepositoryPath() != null ? 
+                targetRepositoryPath = matchingRepositoryPath.getRepositoryPath() != null ?
                     matchingRepositoryPath.getRepositoryPath()
-                        .replaceAll("\\$application", application)
                         .replaceAll("\\$component", component != null ? component : "")
-                        .replaceAll("//", "/") : 
-                    application + "/" + lastQualifier;
-                
-                if (targetRepositoryPath.startsWith("/")) {
-                    targetRepositoryPath = targetRepositoryPath.substring(1);
-                }
+                        .replaceAll("^/", "") :
+                    lastQualifier;
                 
                 pdsEncoding = matchingRepositoryPath.getEncoding() != null ? 
                     matchingRepositoryPath.getEncoding() : "IBM-1047";
@@ -489,8 +484,8 @@ public class ExtractApplications {
                 fileExtension = lastQualifier;
                 sourceGroup = lastQualifier;
                 language = lastQualifier;
-                languageProcessor = lastQualifier + ".groovy";
-                targetRepositoryPath = application + "/" + lastQualifier;
+                languageProcessor = lastQualifier;
+                targetRepositoryPath = "src/" + lastQualifier;
                 pdsEncoding = "IBM-1047";
                 artifactsType = lastQualifier;
             }
