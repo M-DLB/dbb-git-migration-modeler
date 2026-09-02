@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/IBM/dbb-git-migration-modeler/refs/heads/main/schema/repository-paths-mapping-schema.json
 
 repositoryPaths:
-  - repositoryPath: $application/$component/src/cobol
+  - repositoryPath: $component/src/cobol
     artifactsType: "Program"
     sourceGroup: "cobol"
     language: "COBOL"
@@ -12,7 +12,7 @@ repositoryPaths:
     mvsMapping:
       datasetLastLevelQualifiers:
         - COBOL
-  - repositoryPath: $application/$component/src/copy
+  - repositoryPath: $component/src/copy
     artifactsType: "Include File"
     sourceGroup: "copy"
     language: "COBOL"
@@ -26,7 +26,7 @@ repositoryPaths:
       scan:
         language: COB
         fileType: INCL
-  - repositoryPath: $application/$component/src/pli
+  - repositoryPath: $component/src/pli
     artifactsType: "Program"
     sourceGroup: "pli"
     language: "PL/I"
@@ -40,7 +40,7 @@ repositoryPaths:
       types:
         - PLICICSDB2
         - PLICICS
-  - repositoryPath: $application/$component/src/asm
+  - repositoryPath: $component/src/asm
     artifactsType: "Program"
     sourceGroup: "asm"
     language: "ASM"
@@ -51,7 +51,7 @@ repositoryPaths:
     mvsMapping:
       datasetLastLevelQualifiers:
         - ASM
-  - repositoryPath: $application/$component/src/bms
+  - repositoryPath: $component/src/bms
     artifactsType: "BMS"
     sourceGroup: "bms"
     language: "ASM"
@@ -62,7 +62,7 @@ repositoryPaths:
     mvsMapping:
       datasetLastLevelQualifiers:
         - BMS
-  - repositoryPath: $application/$component/src/link
+  - repositoryPath: $component/src/link
     artifactsType: "Other"
     sourceGroup: "link"
     language: "LINK"
@@ -73,7 +73,7 @@ repositoryPaths:
     mvsMapping:
       datasetLastLevelQualifiers:
         - LINK
-  - repositoryPath: $application/$component/src/jcl
+  - repositoryPath: $component/src/jcl
     artifactsType: "Other"
     sourceGroup: "jcl"
     language: "JCL"
