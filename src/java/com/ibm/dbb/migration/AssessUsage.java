@@ -844,7 +844,7 @@ public class AssessUsage {
             return;
         }
         
-        // Detect current sourceGroupName
+        // Strip component prefix to get the base source group name (e.g. "plouf:copy" -> "copy")
         String currentSourceGroup;
         String[] sourceGroupParts = sourceGroupName.split(":");
         if (sourceGroupParts.length == 2) {
@@ -853,16 +853,11 @@ public class AssessUsage {
             currentSourceGroup = sourceGroupName;
         }
         
-        // Detect target component name from referencing programs/elements
-        String targetApplicationComponent = detectTargetComponent(owningApplication, qualifiedFile, targetApplicationDescriptor);
+        // Moved files always land at application level in the target, never inside a component folder.
+        String targetSourceGroupName = currentSourceGroup;
         
-        // Define target source group name
-        String targetSourceGroupName = (targetApplicationComponent != null && !targetApplicationComponent.isEmpty())
-            ? targetApplicationComponent + ":" + currentSourceGroup
-            : currentSourceGroup;
-        
-        // Compute target repository path
-        String targetRepositoryPath = computeTargetRepositoryPath(sourceGroupName, owningApplication, targetApplicationComponent);
+        // Compute target repository path (always application-level, no component)
+        String targetRepositoryPath = computeTargetRepositoryPath(sourceGroupName, "");
         
         logger.logMessage("\t==> Moving Include File '" + file + "' to '" + targetRepositoryPath +
             "' in Application '" + owningApplication + "'.");
@@ -907,58 +902,9 @@ public class AssessUsage {
     }
     
     /**
-     * Detect the target component based on referencing files in the target application.
-     */
-    private String detectTargetComponent(String owningApplication, String qualifiedFile,
-                                        ApplicationDescriptor targetApplicationDescriptor) throws Exception {
-        // Find impacted files to determine component
-        Map<String, String> properties = new HashMap<>();
-        String impactSearchRule = String.format(
-            "search:[:COPY,SQL INCLUDE:]%s/?path=%s/**;**/**",
-            props.getProperty("DBB_MODELER_APPLICATION_DIR"),
-            owningApplication
-        );
-        
-        Map<ImpactFile, String> impactedFiles = findImpactedFilesWithBuildGroup(
-            impactSearchRule,
-            props.getProperty("application") + "/" + qualifiedFile
-        );
-        
-        Set<ApplicationDescriptor.Source> referencingSourceGroups = new HashSet<>();
-        for (ImpactFile impactedFile : impactedFiles.keySet()) {
-            if (targetApplicationDescriptor.getSources() != null) {
-                for (ApplicationDescriptor.Source source : targetApplicationDescriptor.getSources()) {
-                    if (impactedFile.getFile().contains(source.getRepositoryPath())) {
-                        referencingSourceGroups.add(source);
-                    }
-                }
-            }
-        }
-        
-        if (referencingSourceGroups.size() == 1) {
-            // Single source group referencing it
-            ApplicationDescriptor.Source sourceGroup = referencingSourceGroups.iterator().next();
-            String tmpSourceGroupName = sourceGroup.getName();
-            String[] sourceGroupIdentifier = tmpSourceGroupName.split(":");
-            
-            if (sourceGroupIdentifier.length == 1) {
-                return ""; // No component identified
-            } else if (sourceGroupIdentifier.length == 2) {
-                return sourceGroupIdentifier[0]; // Component identified
-            }
-        } else if (referencingSourceGroups.size() > 1) {
-            // Multiple components identified
-            return "COMMON";
-        }
-        
-        return "";
-    }
-    
-    /**
      * Compute the target repository path based on repository path mapping configuration.
      */
-    private String computeTargetRepositoryPath(String sourceGroupName, String owningApplication,
-                                              String targetApplicationComponent) {
+    private String computeTargetRepositoryPath(String sourceGroupName, String targetApplicationComponent) {
         // Strip component prefix (e.g. "COMP1:copy" -> "copy") before looking up in mapping
         String[] sourceGroupParts = sourceGroupName.split(":");
         String baseSourceGroup = sourceGroupParts.length == 2 ? sourceGroupParts[1] : sourceGroupName;
