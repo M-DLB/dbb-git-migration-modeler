@@ -39,6 +39,7 @@ public class Setup {
         "REPOSITORY_PATH_MAPPING_FILE",
         "APPLICATION_TYPES_MAPPING",
         "TYPE_CONFIGURATIONS_FILE",
+        "INTERACTIVE_RUN",
         "APPLICATION_ARTIFACTS_HLQ",
         "SCAN_CONTROL_TRANSFERS",
         "SCAN_DATASET_MEMBERS",
@@ -49,8 +50,7 @@ public class Setup {
         "GIT_COMMIT_MESSAGE",
         "GIT_TAG_RELEASE",
         "MOVE_FILES_FLAG",
-        "PUBLISH_ARTIFACTS",
-        "INTERACTIVE_RUN"
+        "PUBLISH_ARTIFACTS"
     };
 
     private static final String[] PUBLISHING_KEYS = {
