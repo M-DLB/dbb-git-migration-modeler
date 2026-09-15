@@ -837,6 +837,7 @@ public class InitApplicationRepository {
             "--tarFileName", appName + "-" + version + "-baseline.tar",
             "--applicationFolderPath", appRepoDir.getAbsolutePath(),
             "--owner", pipelineUser + ":" + pipelineUserGroup,
+            "--publish",
             "--artifactRepositoryUrl", configProperties.getProperty("ARTIFACT_REPOSITORY_SERVER_URL"),
             "--artifactRepositoryUser", configProperties.getProperty("ARTIFACT_REPOSITORY_USER"),
             "--artifactRepositoryPassword", configProperties.getProperty("ARTIFACT_REPOSITORY_PASSWORD"),
