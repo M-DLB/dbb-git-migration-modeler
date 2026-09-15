@@ -170,6 +170,7 @@ public class InitApplicationRepository {
         String applicationDir = configProperties.getProperty("DBB_MODELER_APPLICATION_DIR");
         String logsDir = configProperties.getProperty("DBB_MODELER_LOGS");
         String defaultBranch = configProperties.getProperty("APPLICATION_DEFAULT_BRANCH", "main");
+        String currentBranch = configProperties.getProperty("APPLICATION_CURRENT_BRANCH", "main");
         
         if (applicationDir == null || applicationDir.isEmpty()) {
             exitCode = 8;
@@ -243,7 +244,7 @@ public class InitApplicationRepository {
             if (exitCode != 0) return;
             
             // Git operations: status, add, commit
-            performGitOperations(appRepoDir, logFile);
+            performGitOperations(appRepoDir, currentBranch, logFile);
             
             if (exitCode != 0) return;
             
@@ -607,12 +608,18 @@ public class InitApplicationRepository {
         }
     }
     
-    private void performGitOperations(File directory, String logFile) throws IOException {
+    private void performGitOperations(File directory, String currentBranch, String logFile) throws IOException {
+        // Git checkout
+        logger.logMessage("** Checkout branch '" + currentBranch + "'");
+        executeCommand(Arrays.asList("git", "checkout", currentBranch), directory, logFile);
+
+        if (exitCode != 0) return;
+
         // Git status
         executeCommand(Arrays.asList("git", "status"), directory, logFile);
-        
+
         if (exitCode != 0) return;
-        
+
         // Git add all
         logger.logMessage("** Add files to Git repository");
         executeCommand(Arrays.asList("git", "add", "--all"), directory, logFile);

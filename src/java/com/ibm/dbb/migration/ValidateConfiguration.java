@@ -85,6 +85,8 @@ public class ValidateConfiguration {
         validateMetadataStore(ctx, configProperties);
         validateBuildFramework(ctx, configProperties);
         validateCommunityRepo(ctx, configProperties);
+        validateGitConfiguration(ctx, configProperties);
+        validateWorkflowConfiguration(ctx, configProperties);
 
         String publishArtifacts = configProperties.getProperty("PUBLISH_ARTIFACTS");
         if ("true".equals(publishArtifacts)) {
@@ -215,6 +217,22 @@ public class ValidateConfiguration {
         } else {
             checkDirectory(ctx, configProperties, "DBB_ZBUILDER", "The zBuilder instance");
         }
+    }
+
+    private static void validateGitConfiguration(ValidationContext ctx, Properties configProperties) {
+        checkRequired(ctx, configProperties, "APPLICATION_DEFAULT_BRANCH",  "The default branch for application repositories (APPLICATION_DEFAULT_BRANCH)");
+        checkRequired(ctx, configProperties, "APPLICATION_CURRENT_BRANCH",  "The current branch to checkout before staging files (APPLICATION_CURRENT_BRANCH)");
+        checkRequired(ctx, configProperties, "GIT_COMMIT_MESSAGE",          "The Git commit message for the initial load (GIT_COMMIT_MESSAGE)");
+        checkRequired(ctx, configProperties, "GIT_TAG_RELEASE",             "The flag to create a Git tag and release branch (GIT_TAG_RELEASE)");
+    }
+
+    private static void validateWorkflowConfiguration(ValidationContext ctx, Properties configProperties) {
+        checkRequired(ctx, configProperties, "CLEAN_REPOSITORIES",      "The flag to clean application repositories before initialization (CLEAN_REPOSITORIES)");
+        checkRequired(ctx, configProperties, "INTERACTIVE_RUN",         "The flag to run the migration in interactive mode (INTERACTIVE_RUN)");
+        checkRequired(ctx, configProperties, "MOVE_FILES_FLAG",         "The flag to move files during usage assessment (MOVE_FILES_FLAG)");
+        checkRequired(ctx, configProperties, "PUBLISH_ARTIFACTS",       "The flag to publish artifacts to the artifact repository (PUBLISH_ARTIFACTS)");
+        checkRequired(ctx, configProperties, "SCAN_CONTROL_TRANSFERS",  "The flag to scan for control transfers during application scanning (SCAN_CONTROL_TRANSFERS)");
+        checkRequired(ctx, configProperties, "SCAN_DATASET_MEMBERS",    "The flag to scan dataset members (SCAN_DATASET_MEMBERS)");
     }
 
     private static void validateCommunityRepo(ValidationContext ctx, Properties configProperties) {

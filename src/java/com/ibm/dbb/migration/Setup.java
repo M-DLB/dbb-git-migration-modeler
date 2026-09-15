@@ -47,6 +47,7 @@ public class Setup {
         "DBB_COMMUNITY_REPO",
         "CLEAN_REPOSITORIES",
         "APPLICATION_DEFAULT_BRANCH",
+        "APPLICATION_CURRENT_BRANCH",
         "GIT_COMMIT_MESSAGE",
         "GIT_TAG_RELEASE",
         "MOVE_FILES_FLAG",
@@ -135,6 +136,7 @@ public class Setup {
         config.setProperty("DBB_ZBUILDER",                          "/var/dbb/zBuilder");
         config.setProperty("DBB_COMMUNITY_REPO",                    "/var/dbb/dbb");
         config.setProperty("APPLICATION_DEFAULT_BRANCH",            "main");
+        config.setProperty("APPLICATION_CURRENT_BRANCH",            "main");
         config.setProperty("GIT_COMMIT_MESSAGE",                    "Initial Load");
         config.setProperty("GIT_TAG_RELEASE",                       "true");
         config.setProperty("MOVE_FILES_FLAG",                       "true");
