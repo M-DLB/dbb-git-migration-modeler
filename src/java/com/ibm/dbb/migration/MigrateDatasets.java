@@ -165,9 +165,16 @@ public class MigrateDatasets {
         }
         logger.logMessage("Local GIT repository: " + repository);
         
+        boolean generateGitAttributes = cmd.hasOption("ga");
         File gitAttributesFile = new File(repository, ".gitattributes");
-        BufferedWriter gitAttributeWriter = new BufferedWriter(
-            new OutputStreamWriter(new FileOutputStream(gitAttributesFile, true), "ISO8859-1"));
+        BufferedWriter gitAttributeWriter = null;
+        if (generateGitAttributes) {
+            gitAttributeWriter = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(gitAttributesFile, true), "ISO8859-1"));
+            logger.logMessage("** .gitattributes file will be generated at " + gitAttributesFile);
+        } else {
+            logger.logMessage("** Skipping .gitattributes generation (use -ga to enable)");
+        }
         
         try {
             if (isMappingFileSpecified) {
@@ -184,11 +191,10 @@ public class MigrateDatasets {
             }
             if (gitAttributeWriter != null) {
                 gitAttributeWriter.close();
-            }
-            
-            // Tag .gitattributes file
-            if (!FileUtils.setFileTag(gitAttributesFile.getPath(), "ISO8859-1")) {
-                System.out.println("*! Error tagging .gitattributes file, must be done manually");
+                // Tag .gitattributes file
+                if (!FileUtils.setFileTag(gitAttributesFile.getPath(), "ISO8859-1")) {
+                    System.out.println("*! Error tagging .gitattributes file, must be done manually");
+                }
             }
             
             if (logger != null) {
@@ -243,6 +249,11 @@ public class MigrateDatasets {
         options.addOption(Option.builder("t")
             .longOpt("error-table")
             .desc("Print a table to visualize non-printable and non-roundtrippable character errors")
+            .build());
+
+        options.addOption(Option.builder("ga")
+            .longOpt("generate-gitattributes")
+            .desc("Generate or update the .gitattributes file with encoding entries (optional)")
             .build());
             
         return options;
