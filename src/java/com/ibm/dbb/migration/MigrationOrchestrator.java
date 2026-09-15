@@ -195,7 +195,12 @@ public class MigrationOrchestrator {
         
         try {
             deleteDirectory(config.getProperty("DBB_MODELER_APPCONFIG_DIR"));
-            // deleteDirectory(config.getProperty("DBB_MODELER_APPLICATION_DIR"));
+            boolean cleanRepositories = "true".equalsIgnoreCase(config.getProperty("CLEAN_REPOSITORIES", "true"));
+            if (cleanRepositories) {
+                deleteDirectory(config.getProperty("DBB_MODELER_APPLICATION_DIR"));
+            } else {
+                System.out.println("[INFO] Skipping cleanup of '" + config.getProperty("DBB_MODELER_APPLICATION_DIR") + "' folder (CLEAN_REPOSITORIES=false)");
+            }
             deleteDirectory(config.getProperty("DBB_MODELER_LOGS"));
             deleteDirectory(config.getProperty("DBB_MODELER_BUILD_CONFIGURATION"));
 

@@ -44,6 +44,7 @@ public class Setup {
         "SCAN_DATASET_MEMBERS",
         "SCAN_DATASET_MEMBERS_ENCODING",
         "DBB_COMMUNITY_REPO",
+        "CLEAN_REPOSITORIES",
         "APPLICATION_DEFAULT_BRANCH",
         "GIT_COMMIT_MESSAGE",
         "GIT_TAG_RELEASE",
@@ -138,6 +139,7 @@ public class Setup {
         config.setProperty("GIT_TAG_RELEASE",                       "true");
         config.setProperty("MOVE_FILES_FLAG",                       "true");
         config.setProperty("INTERACTIVE_RUN",                       "true");
+        config.setProperty("CLEAN_REPOSITORIES",                    "true");
         config.setProperty("PUBLISH_ARTIFACTS",                     "false");
         config.setProperty("ARTIFACT_REPOSITORY_SERVER_URL",        "http://10.3.20.231:8081/artifactory");
         config.setProperty("ARTIFACT_REPOSITORY_USER",              "user");
