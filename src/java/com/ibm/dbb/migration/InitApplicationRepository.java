@@ -814,7 +814,7 @@ public class InitApplicationRepository {
         
         logger.logMessage("** Creating baseline package of application '" + appName + "' started");
         
-        File appLogDir = new File(logsDir, appName);
+        File appLogDir = new File(appRepoDir, "logs");
         appLogDir.mkdirs();
         
         String version = extractVersionFromDescriptor(appRepoDir, appName, defaultBranch);
