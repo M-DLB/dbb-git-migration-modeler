@@ -12,6 +12,8 @@ package com.ibm.dbb.migration.utils;
 import com.ibm.dbb.build.BuildException;
 import com.ibm.dbb.dependency.LogicalFile;
 import com.ibm.dbb.metadata.BuildGroup;
+import com.ibm.dbb.metadata.BuildMap;
+import com.ibm.dbb.metadata.BuildResult;
 import com.ibm.dbb.metadata.Collection;
 import com.ibm.dbb.metadata.MetadataStore;
 import com.ibm.dbb.metadata.MetadataStoreFactory;
@@ -136,28 +138,35 @@ public class MetadataStoreUtility {
     }
     
     /**
-     * Set the owner of a build group (DB2 metadata store only)
-     * Note: The DBB API does not provide a direct setOwner method on BuildGroup.
-     * This method is a placeholder for future DBB API enhancements.
-     * For now, it validates the build group exists but does not set the owner.
+     * Set the owner of all metadata objects belonging to a given BuildGroup:
+     * all BuildMaps, Collections, and BuildResults within that group.
      *
      * @param buildGroupName Build group name
-     * @param owner Owner user ID
-     * @throws BuildException if operation fails
+     * @param owner Owner user ID to assign
+     * @throws BuildException if the build group does not exist or any ownership update fails
      */
-    public void setBuildGroupOwner(String buildGroupName, String owner) throws BuildException {
+    public void setMetadataObjectsOwner(String buildGroupName, String owner) throws BuildException {
         if (metadataStore == null) {
             throw new IllegalStateException("MetadataStore not initialized");
         }
-        
+
         if (!metadataStore.buildGroupExists(buildGroupName)) {
             throw new BuildException("Build group does not exist: " + buildGroupName);
         }
-        
-        // Note: The DBB BuildGroup API does not currently provide a setOwner() method
-        // This functionality may need to be implemented via direct DB2 SQL updates
-        // or wait for future DBB API enhancements
-        // For now, we just validate the build group exists
+
+        BuildGroup buildGroup = metadataStore.getBuildGroup(buildGroupName);
+
+        for (BuildMap buildMap : buildGroup.getBuildMaps()) {
+            buildMap.setOwner(owner);
+        }
+
+        for (Collection collection : buildGroup.getCollections()) {
+            collection.setOwner(owner);
+        }
+
+        for (BuildResult buildResult : buildGroup.getBuildResults()) {
+            buildResult.setOwner(owner);
+        }
     }
     
     /**

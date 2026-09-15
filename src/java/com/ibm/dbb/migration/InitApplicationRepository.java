@@ -793,14 +793,14 @@ public class InitApplicationRepository {
             
             metadataStoreUtil.initializeDb2MetadataStoreWithPasswordFile(jdbcId, new File(passwordFile), db2Props);
             
-            // Set build group owner
-            metadataStoreUtil.setBuildGroupOwner(buildGroupName, pipelineUser);
-            logger.logMessage("** Successfully set owner '" + pipelineUser + "' for buildGroup '" + buildGroupName + "'");
+            // Set owner on all metadata objects of the build group
+            metadataStoreUtil.setMetadataObjectsOwner(buildGroupName, pipelineUser);
+            logger.logMessage("** Successfully set owner '" + pipelineUser + "' for all metadata objects (BuildMaps, Collections, BuildResults) of buildGroup '" + buildGroupName + "'");
             
         } catch (BuildException e) {
             exitCode = 8;
-            logger.logMessage("[ERROR] Failed to set buildGroup owner: " + e.getMessage());
-            throw new IOException("Failed to set buildGroup owner", e);
+            logger.logMessage("[ERROR] Failed to set metadata objects owner for buildGroup '" + buildGroupName + "': " + e.getMessage());
+            throw new IOException("Failed to set metadata objects owner for buildGroup '" + buildGroupName + "'", e);
         }
     }
     
