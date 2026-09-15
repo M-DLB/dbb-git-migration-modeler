@@ -311,7 +311,6 @@ public class MigrationOrchestrator {
                             "-l", logsDir + "/2-" + appName + ".migration.log",
                             "-np", "info",
                             "-r", appDir + "/" + appName,
-                            "-ga",
                             mappingFile.getAbsolutePath()
                         };
                         
