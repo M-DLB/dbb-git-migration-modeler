@@ -340,9 +340,12 @@ public class InitApplicationRepository {
     }
     
     private void createGitIgnore(File appRepoDir) throws IOException {
-        logger.logMessage("** Create file '.gitignore'");
-
         File gitIgnoreFile = new File(appRepoDir, ".gitignore");
+        if (gitIgnoreFile.exists()) {
+            logger.logMessage("** Skipping '.gitignore' - file already exists");
+            return;
+        }
+        logger.logMessage("** Create file '.gitignore'");
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(gitIgnoreFile, java.nio.charset.StandardCharsets.UTF_8))) {
             writer.println("# Ignore logs folder");
@@ -354,31 +357,29 @@ public class InitApplicationRepository {
     }
 
     private void copyGitAttributes(File appRepoDir, String logFile) throws IOException {
-        logger.logMessage("** Update Git configuration file '.gitattributes'");
-        
         String defaultConfigDir = configProperties.getProperty("DBB_MODELER_DEFAULT_APP_REPO_CONFIG");
         File sourceFile = new File(defaultConfigDir, ".gitattributes");
         File targetFile = new File(appRepoDir, ".gitattributes");
-        
+
         if (targetFile.exists()) {
-            targetFile.delete();
+            logger.logMessage("** Skipping '.gitattributes' - file already exists");
+            return;
         }
-        
+        logger.logMessage("** Update Git configuration file '.gitattributes'");
         FileUtility.copyFileWithTags(sourceFile, targetFile);
         logger.logSilentMessage("[CMD] cp " + sourceFile + " " + targetFile);
     }
     
     private void customizeZappFile(File appRepoDir, String appName, String logFile) throws IOException {
-        logger.logMessage("** Update ZAPP file 'zapp.yaml'");
-        
         String defaultConfigDir = configProperties.getProperty("DBB_MODELER_DEFAULT_APP_REPO_CONFIG");
         File sourceFile = new File(defaultConfigDir, "zapp_template.yaml");
         File targetFile = new File(appRepoDir, "zapp.yaml");
-        
+
         if (targetFile.exists()) {
-            targetFile.delete();
+            logger.logMessage("** Skipping 'zapp.yaml' - file already exists");
+            return;
         }
-        
+        logger.logMessage("** Update ZAPP file 'zapp.yaml'");
         FileUtility.copyFileWithTags(sourceFile, targetFile);
         
         // Customize ZAPP file using Java utility
@@ -406,14 +407,18 @@ public class InitApplicationRepository {
     }
     
     private void createBaselineReferenceConfig(File appRepoDir, String appName, String defaultBranch) throws IOException {
-        logger.logMessage("** Create file 'baselineReference.config'");
-        
         File confDir = new File(appRepoDir, "application-conf");
+        File baselineFile = new File(confDir, "baselineReference.config");
+
+        if (baselineFile.exists()) {
+            logger.logMessage("** Skipping 'baselineReference.config' - file already exists");
+            return;
+        }
+        logger.logMessage("** Create file 'baselineReference.config'");
+
         if (!confDir.exists()) {
             confDir.mkdirs();
         }
-        
-        File baselineFile = new File(confDir, "baselineReference.config");
         
         // Get version from applicationDescriptor.yml
         String version = extractVersionFromDescriptor(appRepoDir, appName, defaultBranch);
@@ -439,10 +444,13 @@ public class InitApplicationRepository {
     }
     
     private void createIdzProjectFile(File appRepoDir, String appName) throws IOException {
-        logger.logMessage("** Create file IDZ project configuration file '.project'");
-        
         File projectFile = new File(appRepoDir, ".project");
-        
+        if (projectFile.exists()) {
+            logger.logMessage("** Skipping '.project' - file already exists");
+            return;
+        }
+        logger.logMessage("** Create file IDZ project configuration file '.project'");
+
         try (PrintWriter writer = new PrintWriter(new FileWriter(projectFile))) {
             writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             writer.println("<projectDescription>");
@@ -500,20 +508,33 @@ public class InitApplicationRepository {
             logger.logMessage("[ERROR] The pipeline template file '" + ciFile + "' was not found. rc=" + exitCode);
             return;
         }
-        
-        FileUtility.copyFileWithTags(ciFile, new File(appRepoDir, "azure-pipelines.yml"));
-        
+
+        File targetCiFile = new File(appRepoDir, "azure-pipelines.yml");
+        if (targetCiFile.exists()) {
+            logger.logMessage("** Skipping 'azure-pipelines.yml' - file already exists");
+        } else {
+            FileUtility.copyFileWithTags(ciFile, targetCiFile);
+        }
+
         // Copy deployment templates
         File deploymentDir = new File(appRepoDir, "deployment");
-        deploymentDir.mkdirs();
-        copyDirectory(new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/templates/deployment"), 
-            deploymentDir);
-        
+        if (deploymentDir.exists()) {
+            logger.logMessage("** Skipping 'deployment' directory - already exists");
+        } else {
+            deploymentDir.mkdirs();
+            copyDirectory(new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/templates/deployment"),
+                deploymentDir);
+        }
+
         // Copy tagging templates
         File taggingDir = new File(appRepoDir, "tagging");
-        taggingDir.mkdirs();
-        copyDirectory(new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/templates/tagging"), 
-            taggingDir);
+        if (taggingDir.exists()) {
+            logger.logMessage("** Skipping 'tagging' directory - already exists");
+        } else {
+            taggingDir.mkdirs();
+            copyDirectory(new File(dbbCommunityRepo, "Templates/AzureDevOpsPipeline/templates/tagging"),
+                taggingDir);
+        }
     }
     
     private void copyGitLabPipeline(File appRepoDir, String dbbCommunityRepo, String pipelineCI, String logFile) throws IOException {
@@ -523,10 +544,15 @@ public class InitApplicationRepository {
             logger.logMessage("[ERROR] The pipeline template file '" + ciFile + "' was not found. rc=" + exitCode);
             return;
         }
-        
-        FileUtility.copyFileWithTags(ciFile, new File(appRepoDir, ".gitlab-ci.yml"));
+
+        File targetFile = new File(appRepoDir, ".gitlab-ci.yml");
+        if (targetFile.exists()) {
+            logger.logMessage("** Skipping '.gitlab-ci.yml' - file already exists");
+            return;
+        }
+        FileUtility.copyFileWithTags(ciFile, targetFile);
     }
-    
+
     private void copyJenkinsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
         File ciFile = new File(dbbCommunityRepo, "Templates/JenkinsPipeline/Jenkinsfile");
         if (!ciFile.exists()) {
@@ -534,8 +560,13 @@ public class InitApplicationRepository {
             logger.logMessage("[ERROR] The pipeline template file '" + ciFile + "' was not found. rc=" + exitCode);
             return;
         }
-        
-        FileUtility.copyFileWithTags(ciFile, new File(appRepoDir, "Jenkinsfile"));
+
+        File targetFile = new File(appRepoDir, "Jenkinsfile");
+        if (targetFile.exists()) {
+            logger.logMessage("** Skipping 'Jenkinsfile' - file already exists");
+            return;
+        }
+        FileUtility.copyFileWithTags(ciFile, targetFile);
     }
     
     private void copyGitHubActionsPipeline(File appRepoDir, String dbbCommunityRepo, String logFile) throws IOException {
@@ -545,8 +576,12 @@ public class InitApplicationRepository {
             logger.logMessage("[ERROR] The pipeline template directory '" + ciDir + "' was not found. rc=" + exitCode);
             return;
         }
-        
+
         File targetDir = new File(appRepoDir, ".github");
+        if (targetDir.exists()) {
+            logger.logMessage("** Skipping '.github' directory - already exists");
+            return;
+        }
         copyDirectory(ciDir, targetDir);
     }
     
