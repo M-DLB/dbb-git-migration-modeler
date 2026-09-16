@@ -1046,7 +1046,7 @@ public class InitApplicationRepository {
      *         an empty list means all outputs are present.
      */
     private List<String> verifyBuildOutputs(File appRepoDir, String appName) {
-        logger.logMessage("** Verifying EXECUTE outputs from the full build report for application '" + appName + "'");
+        logger.logSilentMessage("** Verifying EXECUTE outputs from the full build report for application '" + appName + "'");
 
         List<String> missingOutputs = new ArrayList<>();
 
@@ -1079,7 +1079,6 @@ public class InitApplicationRepository {
                 return missingOutputs;
             }
 
-            logger.logMessage("** Found " + executeRecords.size() + " EXECUTE record(s). Verifying outputs...");
 
             for (ExecuteRecord record : executeRecords) {
                 List<ExecuteRecord.OutputInfo> outputs = record.getOutputs();
