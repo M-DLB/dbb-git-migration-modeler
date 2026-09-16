@@ -784,10 +784,10 @@ public class InitApplicationRepository {
         List<String> command = new ArrayList<>();
         command.add(dbbHome + "/bin/dbb");
         command.add("build");
-        command.add("full");
+        command.add("metadata");
         command.add("--hlq");
         command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
-        command.add("--preview");
+//        command.add("--preview");
         
         if ("db2".equals(metadataStoreType)) {
             command.add("--dbid");
