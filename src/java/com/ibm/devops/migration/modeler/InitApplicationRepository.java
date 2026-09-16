@@ -1088,6 +1088,12 @@ public class InitApplicationRepository {
                 for (ExecuteRecord.OutputInfo outputInfo : outputs) {
                     if (outputInfo == null || outputInfo.dataset == null || outputInfo.dataset.trim().isEmpty()) continue;
 
+                    // Only verify outputs that have a deployType defined
+                    if (outputInfo.deployType == null || outputInfo.deployType.trim().isEmpty()) {
+                        logger.logSilentMessage("** Skipping output without deployType: " + outputInfo.dataset.trim());
+                        continue;
+                    }
+
                     // Normalise: strip surrounding quotes and whitespace
                     String normalised = outputInfo.dataset.trim().replaceAll("^['\"]|['\"]$", "").toUpperCase();
 
@@ -1095,7 +1101,7 @@ public class InitApplicationRepository {
                     // ZFile.exists() handles both "//DSN" (sequential) and "//PDS(MBR)" (member) notation.
                     boolean exists = false;
                     try {
-                        exists = ZFile.exists("//" + normalised);
+                        exists = ZFile.exists("//'" + normalised + "'");
                     } catch (Exception e) {
                         logger.logMessage("*! [WARNING] Could not check existence of '" +
                             normalised + "': " + e.getMessage());
