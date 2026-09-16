@@ -42,7 +42,7 @@ fi
 java -Dfile.encoding=COMPAT \
      -Ddbb.modeler.home="$DBB_MODELER_HOME" \
      -cp "$CLASSPATH" \
-     com.ibm.dbb.migration.Setup
+     com.ibm.devops.migration.modeler.Setup
 rc=$?
 
 exit $rc

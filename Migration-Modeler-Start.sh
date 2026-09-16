@@ -82,7 +82,7 @@ fi
 java -Dfile.encoding=COMPAT \
      -Ddbb.modeler.home="$DBB_MODELER_HOME" \
      -cp "$CLASSPATH" \
-     com.ibm.dbb.migration.MigrationOrchestrator \
+     com.ibm.devops.migration.modeler.MigrationOrchestrator \
      -c "$DBB_GIT_MIGRATION_MODELER_CONFIG_FILE" \
      $APPLICATION_FILTER
 rc=$?
