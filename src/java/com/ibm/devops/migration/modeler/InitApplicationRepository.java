@@ -674,9 +674,6 @@ public class InitApplicationRepository {
      * @param enable {@code true} to include the Languages task, {@code false} to exclude it.
      */
     private void updateLanguagesTaskConfiguration(boolean enable) {
-        logger.logMessage("** " + (enable ? "Enabling" : "Disabling") +
-            " the 'Languages' task in the metadata lifecycle of 'dbb-build.yaml'");
-
         try {
             String dbbBuildYamlFilePath = configProperties.getProperty("DBB_ZBUILDER") + "/dbb-build.yaml";
             File dbbBuildYamlFile = new File(dbbBuildYamlFilePath);
@@ -731,13 +728,9 @@ public class InitApplicationRepository {
                         lifecycleTasks.add("Languages");
                     }
                 }
-                logger.logMessage("** 'Languages' task added to the metadata lifecycle.");
             } else if (!enable && alreadyPresent) {
                 lifecycleTasks.remove("Languages");
-                logger.logMessage("** 'Languages' task removed from the metadata lifecycle.");
             } else {
-                logger.logMessage("** 'Languages' task is already " + (enable ? "present" : "absent") +
-                    ". No changes made.");
             }
 
             // Write updated YAML back, preserving top-level structure order
@@ -761,10 +754,6 @@ public class InitApplicationRepository {
             } catch (Exception e) {
                 // Ignore file tagging on non-z/OS systems
             }
-
-            logger.logMessage("** The 'dbb-build.yaml' file located at '" + dbbBuildYamlFilePath +
-                "' was successfully modified.");
-
         } catch (Exception e) {
             exitCode = 8;
             logger.logMessage("*! [ERROR] Failed to update Languages task configuration: " +
@@ -773,8 +762,6 @@ public class InitApplicationRepository {
     }
 
     private void updateZBuilderConfiguration(String appName, String logsDir) throws IOException {
-        logger.logMessage("** Updating zBuilder 'dbb-build.yaml' with MetadataInit task configuration");
-
         try {
             String dbbBuildYamlFilePath = configProperties.getProperty("DBB_ZBUILDER") + "/dbb-build.yaml";
             File dbbBuildYamlFile = new File(dbbBuildYamlFilePath);
@@ -799,9 +786,6 @@ public class InitApplicationRepository {
             } catch (Exception e) {
                 // Ignore file tagging on non-z/OS systems
             }
-
-            logger.logMessage("** Modifying the DBB zBuilder 'dbb-build.yaml' file located at '" +
-                dbbBuildYamlFilePath + "'.");
 
             // Find or create the MetadataInit task
             @SuppressWarnings("unchecked")
@@ -870,9 +854,6 @@ public class InitApplicationRepository {
             } catch (Exception e) {
                 // Ignore file tagging on non-z/OS systems
             }
-
-            logger.logMessage("** The DBB zBuilder 'dbb-build.yaml' file located at '" +
-                dbbBuildYamlFilePath + "' was successfully modified.");
 
         } catch (Exception e) {
             exitCode = 8;
