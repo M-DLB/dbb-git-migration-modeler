@@ -7,7 +7,7 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration.utils;
+package com.ibm.devops.migration.modeler.utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,12 +18,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import com.ibm.dbb.migration.model.ApplicationDescriptor;
-import com.ibm.dbb.migration.model.ApplicationDescriptor.Baseline;
-import com.ibm.dbb.migration.model.ApplicationDescriptor.Consumer;
-import com.ibm.dbb.migration.model.ApplicationDescriptor.DependencyDescriptor;
-import com.ibm.dbb.migration.model.ApplicationDescriptor.FileDef;
-import com.ibm.dbb.migration.model.ApplicationDescriptor.Source;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor.Baseline;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor.Consumer;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor.DependencyDescriptor;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor.FileDef;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor.Source;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.introspector.Property;
 import org.yaml.snakeyaml.nodes.Tag;

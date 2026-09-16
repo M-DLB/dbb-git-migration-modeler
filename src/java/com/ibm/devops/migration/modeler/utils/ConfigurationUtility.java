@@ -7,7 +7,7 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration.utils;
+package com.ibm.devops.migration.modeler.utils;
 
 import java.io.File;
 import java.util.Properties;

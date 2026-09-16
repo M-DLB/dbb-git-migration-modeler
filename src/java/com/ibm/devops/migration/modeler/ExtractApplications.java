@@ -7,15 +7,15 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
-import com.ibm.dbb.migration.model.ApplicationMappingConfiguration;
-import com.ibm.dbb.migration.model.ApplicationDescriptor;
-import com.ibm.dbb.migration.model.RepositoryPathsMapping;
-import com.ibm.dbb.migration.model.TypesMapping;
-import com.ibm.dbb.migration.utils.Logger;
-import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
-import com.ibm.dbb.migration.utils.ConfigurationUtility;
+import com.ibm.devops.migration.modeler.model.ApplicationMappingConfiguration;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
+import com.ibm.devops.migration.modeler.model.RepositoryPathsMapping;
+import com.ibm.devops.migration.modeler.model.TypesMapping;
+import com.ibm.devops.migration.modeler.utils.Logger;
+import com.ibm.devops.migration.modeler.utils.ApplicationDescriptorUtils;
+import com.ibm.devops.migration.modeler.utils.ConfigurationUtility;
 import com.ibm.dmh.scan.classify.Dmh5210;
 import com.ibm.dmh.scan.classify.ScanProperties;
 import com.ibm.dmh.scan.classify.SingleFilesMetadata;

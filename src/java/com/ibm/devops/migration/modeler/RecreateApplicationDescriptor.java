@@ -7,14 +7,14 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
-import com.ibm.dbb.migration.model.ApplicationDescriptor;
-import com.ibm.dbb.migration.model.RepositoryPathsMapping;
-import com.ibm.dbb.migration.model.RepositoryPathsMapping.RepositoryPath;
-import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
-import com.ibm.dbb.migration.utils.ConfigurationUtility;
-import com.ibm.dbb.migration.utils.Logger;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
+import com.ibm.devops.migration.modeler.model.RepositoryPathsMapping;
+import com.ibm.devops.migration.modeler.model.RepositoryPathsMapping.RepositoryPath;
+import com.ibm.devops.migration.modeler.utils.ApplicationDescriptorUtils;
+import com.ibm.devops.migration.modeler.utils.ConfigurationUtility;
+import com.ibm.devops.migration.modeler.utils.Logger;
 import org.apache.commons.cli.*;
 import org.yaml.snakeyaml.Yaml;
 

@@ -7,7 +7,7 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
 import java.io.*;
 import java.nio.file.*;
@@ -110,7 +110,7 @@ public class RefreshApplicationDescriptorOrchestrator {
 
     private void printUsage() {
         System.out.println();
-        System.out.println("Usage: java -cp <classpath> com.ibm.dbb.migration.RefreshApplicationDescriptorOrchestrator [options]");
+        System.out.println("Usage: java -cp <classpath> com.ibm.devops.migration.modeler.RefreshApplicationDescriptorOrchestrator [options]");
         System.out.println();
         System.out.println("Options:");
         System.out.println("  -c <file>    Configuration file (required)");

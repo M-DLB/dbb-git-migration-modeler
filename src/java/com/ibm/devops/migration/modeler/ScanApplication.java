@@ -7,18 +7,18 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
 import com.ibm.dbb.dependency.DependencyScanner;
 import com.ibm.dbb.dependency.LogicalFile;
 import com.ibm.dbb.metadata.Collection;
 import com.ibm.dbb.build.BuildException;
-import com.ibm.dbb.migration.model.ApplicationDescriptor;
-import com.ibm.dbb.migration.utils.Logger;
-import com.ibm.dbb.migration.utils.ApplicationDescriptorUtils;
-import com.ibm.dbb.migration.utils.MetadataStoreUtility;
-import com.ibm.dbb.migration.utils.FileUtility;
-import com.ibm.dbb.migration.utils.ConfigurationUtility;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
+import com.ibm.devops.migration.modeler.utils.Logger;
+import com.ibm.devops.migration.modeler.utils.ApplicationDescriptorUtils;
+import com.ibm.devops.migration.modeler.utils.MetadataStoreUtility;
+import com.ibm.devops.migration.modeler.utils.FileUtility;
+import com.ibm.devops.migration.modeler.utils.ConfigurationUtility;
 import org.apache.commons.cli.*;
 
 import java.io.*;

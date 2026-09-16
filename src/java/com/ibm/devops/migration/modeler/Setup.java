@@ -7,9 +7,9 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
-import com.ibm.dbb.migration.utils.MetadataStoreUtility;
+import com.ibm.devops.migration.modeler.utils.MetadataStoreUtility;
 
 import java.io.*;
 import java.nio.file.*;

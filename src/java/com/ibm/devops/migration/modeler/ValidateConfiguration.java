@@ -7,10 +7,10 @@
  * Contract with IBM Corp.
  */
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
-import com.ibm.dbb.migration.utils.ConfigurationUtility;
-import com.ibm.dbb.migration.utils.FileUtility;
+import com.ibm.devops.migration.modeler.utils.ConfigurationUtility;
+import com.ibm.devops.migration.modeler.utils.FileUtility;
 
 import java.io.*;
 import java.net.HttpURLConnection;

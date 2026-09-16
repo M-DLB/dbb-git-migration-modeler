@@ -7,13 +7,13 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration;
+package com.ibm.devops.migration.modeler;
 
 import com.ibm.dbb.build.BuildProperties;
 import com.ibm.dbb.build.CopyToHFS;
 import com.ibm.dbb.build.DBBConstants.CopyMode;
 import com.ibm.dbb.utils.FileUtils;
-import com.ibm.dbb.migration.utils.Logger;
+import com.ibm.devops.migration.modeler.utils.Logger;
 import com.ibm.jzos.RecordReader;
 import com.ibm.jzos.ZFileConstants;
 import org.apache.commons.cli.*;
@@ -224,7 +224,7 @@ public class MigrateDatasets {
             .longOpt("mapping")
             .hasArg()
             .argName("mapping")
-            .desc("The ID of mapping rule (optional), for example: com.ibm.dbb.migration.MappingRule")
+            .desc("The ID of mapping rule (optional), for example: com.ibm.devops.migration.modeler.MappingRule")
             .build());
             
         options.addOption(Option.builder("p")
@@ -355,7 +355,7 @@ public class MigrateDatasets {
         String[] datasets = arg.split(",");
         
         // Parse mapping rule
-        String mappingRuleId = "com.ibm.dbb.migration.MappingRule";
+        String mappingRuleId = "com.ibm.devops.migration.modeler.MappingRule";
         Map<String, String> mappingRuleAttrs = new HashMap<>();
         
         if (mappingRuleParam != null) {
@@ -460,8 +460,8 @@ public class MigrateDatasets {
     
     private Object[] parseMappingRule(String mappingRuleId) {
         Map<String, String> mappingIds = new HashMap<>();
-        mappingIds.put("MappingRule", "com.ibm.dbb.migration.MappingRule");
-        mappingIds.put("com.ibm.dbb.migration.MappingRule", "com.ibm.dbb.migration.MappingRule");
+        mappingIds.put("MappingRule", "com.ibm.devops.migration.modeler.MappingRule");
+        mappingIds.put("com.ibm.devops.migration.modeler.MappingRule", "com.ibm.devops.migration.modeler.MappingRule");
         
         String[] temp = mappingRuleId.split("[\\[\\]]");
         if (temp.length == 1) {
@@ -483,7 +483,7 @@ public class MigrateDatasets {
             }
             return new Object[]{id, attrMap};
         }
-        return new Object[]{"com.ibm.dbb.migration.MappingRule", new HashMap<String, String>()};
+        return new Object[]{"com.ibm.devops.migration.modeler.MappingRule", new HashMap<String, String>()};
     }
     
     private String generateGitAttributeEncodingLine(File root, File file, String encoding) {

@@ -7,10 +7,10 @@
  * Contract with IBM Corp.                                                       *
  ********************************************************************************/
 
-package com.ibm.dbb.migration.utils;
+package com.ibm.devops.migration.modeler.utils;
 
-import com.ibm.dbb.migration.model.ApplicationDescriptor;
-import com.ibm.dbb.migration.model.ApplicationDescriptor.*;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
+import com.ibm.devops.migration.modeler.model.ApplicationDescriptor.*;
 import com.ibm.dbb.utils.FileUtils;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -18,7 +18,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
-import com.ibm.dbb.migration.utils.ApplicationDescriptorRepresenter;
+import com.ibm.devops.migration.modeler.utils.ApplicationDescriptorRepresenter;
 
 import java.io.*;
 import java.util.ArrayList;
