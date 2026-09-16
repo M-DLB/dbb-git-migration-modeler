@@ -668,8 +668,8 @@ public class InitApplicationRepository {
     }
     
     /**
-     * Adds or removes the "Languages" entry from the tasks list of the lifecycle that contains
-     * "MetadataInit" in dbb-build.yaml.
+     * Adds or removes the "Languages" entry from the tasks list of the "metadata" lifecycle
+     * in dbb-build.yaml.
      *
      * @param enable {@code true} to include the Languages task, {@code false} to exclude it.
      */
@@ -691,7 +691,7 @@ public class InitApplicationRepository {
                 dbbBuildYaml = yaml.load(reader);
             }
 
-            // Find the lifecycle whose tasks list contains "MetadataInit"
+            // Find the lifecycle named "metadata"
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> lifecycles =
                 (List<Map<String, Object>>) dbbBuildYaml.get("lifecycles");
@@ -702,9 +702,7 @@ public class InitApplicationRepository {
 
             Map<String, Object> targetLifecycle = null;
             for (Map<String, Object> lifecycle : lifecycles) {
-                @SuppressWarnings("unchecked")
-                List<Object> lifecycleTasks = (List<Object>) lifecycle.get("tasks");
-                if (lifecycleTasks != null && lifecycleTasks.contains("MetadataInit")) {
+                if ("metadata".equals(lifecycle.get("lifecycle"))) {
                     targetLifecycle = lifecycle;
                     break;
                 }
@@ -712,7 +710,7 @@ public class InitApplicationRepository {
 
             if (targetLifecycle == null) {
                 throw new IllegalStateException(
-                    "No lifecycle containing 'MetadataInit' was found in '" + dbbBuildYamlFilePath + "'.");
+                    "No lifecycle named 'metadata' was found in '" + dbbBuildYamlFilePath + "'.");
             }
 
             @SuppressWarnings("unchecked")
