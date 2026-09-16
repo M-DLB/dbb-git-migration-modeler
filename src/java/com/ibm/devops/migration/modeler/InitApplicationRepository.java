@@ -17,8 +17,8 @@ import com.ibm.devops.migration.modeler.utils.FileUtility;
 import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
 import com.ibm.dbb.build.BuildException;
 import com.ibm.dbb.build.report.BuildReport;
-import com.ibm.dbb.build.report.records.DefaultRecordFactory;
 import com.ibm.dbb.build.report.records.ExecuteRecord;
+import com.ibm.dbb.build.report.records.Record;
 import com.ibm.jzos.ZFile;
 import org.apache.commons.cli.*;
 import org.yaml.snakeyaml.DumperOptions;
@@ -274,7 +274,7 @@ public class InitApplicationRepository {
                 updateMetadataStoreOwners(buildGroupName, appName, logFile);
                 
                 // Publish artifacts if enabled
-                publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
+                publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile, buildGroupName);
             } else {
                 logger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
                     "' failed. rc=" + exitCode);
@@ -966,7 +966,7 @@ public class InitApplicationRepository {
         }
     }
     
-    private void publishArtifacts(File appRepoDir, String appName, String defaultBranch, String logsDir, String logFile) throws IOException {
+    private void publishArtifacts(File appRepoDir, String appName, String defaultBranch, String logsDir, String logFile, String buildGroupName) throws IOException {
         if (exitCode != 0) return;
         
         String publishArtifacts = configProperties.getProperty("PUBLISH_ARTIFACTS", "false");
@@ -1089,11 +1089,15 @@ public class InitApplicationRepository {
                 buildReport = BuildReport.parse(fis);
             }
 
-            // Retrieve all EXECUTE records from the build report
-            List<ExecuteRecord> executeRecords = buildReport.getRecords(
-                DefaultRecordFactory.TYPE_EXECUTE, ExecuteRecord.class);
+            // Retrieve all EXECUTE records from the build report by filtering the full record list
+            List<ExecuteRecord> executeRecords = new ArrayList<>();
+            for (Record record : buildReport.getRecords()) {
+                if (record instanceof ExecuteRecord) {
+                    executeRecords.add((ExecuteRecord) record);
+                }
+            }
 
-            if (executeRecords == null || executeRecords.isEmpty()) {
+            if (executeRecords.isEmpty()) {
                 logger.logMessage("** No EXECUTE records found in build report. Nothing to verify.");
                 return missingOutputs;
             }
@@ -1101,29 +1105,20 @@ public class InitApplicationRepository {
             logger.logMessage("** Found " + executeRecords.size() + " EXECUTE record(s). Verifying outputs...");
 
             for (ExecuteRecord record : executeRecords) {
-                List<String> outputs = record.getOutputs();
+                List<ExecuteRecord.OutputInfo> outputs = record.getOutputs();
                 if (outputs == null) continue;
 
-                for (String dsn : outputs) {
-                    if (dsn == null || dsn.trim().isEmpty()) continue;
+                for (ExecuteRecord.OutputInfo outputInfo : outputs) {
+                    if (outputInfo == null || outputInfo.dataset == null || outputInfo.dataset.trim().isEmpty()) continue;
 
                     // Normalise: strip surrounding quotes and whitespace
-                    String normalised = dsn.trim().replaceAll("^['\"]|['\"]$", "").toUpperCase();
+                    String normalised = outputInfo.dataset.trim().replaceAll("^['\"]|['\"]$", "").toUpperCase();
 
-                    // Determine whether this is a PDS member (e.g. MY.LIB(MEMBER)) or a plain dataset
+                    // Determine whether this is a PDS member (e.g. MY.LIB(MEMBER)) or a plain dataset.
+                    // ZFile.exists() handles both "//DSN" (sequential) and "//PDS(MBR)" (member) notation.
                     boolean exists = false;
-                    int memberStart = normalised.indexOf('(');
                     try {
-                        if (memberStart > 0 && normalised.endsWith(")")) {
-                            // PDS member: check the PDS exists first, then the member
-                            String pdsName   = normalised.substring(0, memberStart);
-                            String memberName = normalised.substring(memberStart + 1, normalised.length() - 1);
-                            if (ZFile.dsExists(pdsName)) {
-                                exists = ZFile.memberExists("//" + pdsName + "(" + memberName + ")");
-                            }
-                        } else {
-                            exists = ZFile.dsExists(normalised);
-                        }
+                        exists = ZFile.exists("//" + normalised);
                     } catch (Exception e) {
                         logger.logMessage("*! [WARNING] Could not check existence of '" +
                             normalised + "': " + e.getMessage());
