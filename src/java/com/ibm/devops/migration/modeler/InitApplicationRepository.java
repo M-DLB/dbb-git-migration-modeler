@@ -1052,7 +1052,7 @@ public class InitApplicationRepository {
 
         try {
             // The build report is written to the logs directory under the app repo
-            File buildReportFile = new File(new File(appRepoDir, "logs"), "buildReport.json");
+            File buildReportFile = new File(new File(appRepoDir, "logs"), "BuildReport.json");
             if (!buildReportFile.exists()) {
                 exitCode = 8;
                 logger.logMessage("*! [ERROR] Build report not found at '" +
