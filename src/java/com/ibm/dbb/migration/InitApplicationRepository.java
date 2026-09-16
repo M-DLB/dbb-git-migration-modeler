@@ -611,13 +611,7 @@ public class InitApplicationRepository {
     private void performGitOperations(File directory, String currentBranch, String defaultBranch, String logFile) throws IOException {
         // Git checkout
         logger.logMessage("** Checkout branch '" + currentBranch + "'");
-        if (currentBranch.equals(defaultBranch)) {
-            // Already on the default branch created by git init — no checkout needed
-            executeCommand(Arrays.asList("git", "checkout", currentBranch), directory, logFile);
-        } else {
-            // Create and switch to the target branch (repo may have no commits yet)
-            executeCommand(Arrays.asList("git", "checkout", "-b", currentBranch), directory, logFile);
-        }
+        executeCommand(Arrays.asList("git", "checkout", "-b", currentBranch), directory, logFile);
 
         if (exitCode != 0) return;
 
