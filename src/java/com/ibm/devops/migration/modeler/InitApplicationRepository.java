@@ -261,6 +261,11 @@ public class InitApplicationRepository {
                 logger.logMessage("** Initializing Git repository for application '" + appName +
                     "' completed successfully. rc=" + exitCode);
 
+                // Update the zBuilder dbb-build.yaml with the MetadataInit task configuration
+                updateZBuilderConfiguration(appName, logsDir);
+
+                if (exitCode != 0) return;
+
                 // disable the Languages task in the MetadataInit task based on configuration
                 updateLanguagesTaskConfiguration(false);
 
@@ -891,10 +896,6 @@ public class InitApplicationRepository {
         String dbbHome = System.getenv("DBB_HOME");
         String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
 
-        // Update the zBuilder dbb-build.yaml with the MetadataInit task configuration
-        updateZBuilderConfiguration(appName, logsDir);
-        if (exitCode != 0) return;
-
         Map<String, String> env = new HashMap<>(System.getenv());
         env.put("DBB_BUILD", zBuilderPath);
 
@@ -983,7 +984,7 @@ public class InitApplicationRepository {
         if (version == null || version.isEmpty()) {
             version = "rel-1.0.0";
         }
-        
+
         // Run Full lifecycle without the languages task
         // just scanning for source-level dependencies
         runDBBBuild(appRepoDir, appName, logsDir, logFile, "full");
@@ -1010,7 +1011,6 @@ public class InitApplicationRepository {
         // Enable the Languages task in the MetadataInit task based on configuration
         updateLanguagesTaskConfiguration(true);
 
-
         // Run Metadata lifecycle with the languages task
         // scanning for source-level and output-level dependencies
         // only if all the output objects exist
@@ -1018,8 +1018,6 @@ public class InitApplicationRepository {
 
         // Update metadata store owners (Db2 only)
         updateMetadataStoreOwners(buildGroupName, appName, logFile);
-
-
 
         String dbbHome = System.getenv("DBB_HOME");
         String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
