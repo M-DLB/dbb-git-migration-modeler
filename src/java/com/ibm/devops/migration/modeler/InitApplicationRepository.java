@@ -1088,9 +1088,11 @@ public class InitApplicationRepository {
                 for (ExecuteRecord.OutputInfo outputInfo : outputs) {
                     if (outputInfo == null || outputInfo.dataset == null || outputInfo.dataset.trim().isEmpty()) continue;
 
-                    // Only verify outputs that have a deployType defined
-                    if (outputInfo.deployType == null || outputInfo.deployType.trim().isEmpty()) {
-                        logger.logSilentMessage("** Skipping output without deployType: " + outputInfo.dataset.trim());
+                    // Only verify outputs that have a deployType defined and are not intermediate object files
+                    if (outputInfo.deployType == null || outputInfo.deployType.trim().isEmpty()
+                            || "OBJ".equalsIgnoreCase(outputInfo.deployType.trim())) {
+                        logger.logSilentMessage("** Skipping output with deployType '" +
+                            outputInfo.deployType + "': " + outputInfo.dataset.trim());
                         continue;
                     }
 
