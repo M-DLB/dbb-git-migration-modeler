@@ -16,6 +16,10 @@ import com.ibm.devops.migration.modeler.utils.ApplicationDescriptorUtils;
 import com.ibm.devops.migration.modeler.utils.FileUtility;
 import com.ibm.devops.migration.modeler.model.ApplicationDescriptor;
 import com.ibm.dbb.build.BuildException;
+import com.ibm.dbb.build.report.BuildReport;
+import com.ibm.dbb.build.report.records.DefaultRecordFactory;
+import com.ibm.dbb.build.report.records.ExecuteRecord;
+import com.ibm.jzos.ZFile;
 import org.apache.commons.cli.*;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -256,9 +260,15 @@ public class InitApplicationRepository {
             if (exitCode == 0) {
                 logger.logMessage("** Initializing Git repository for application '" + appName +
                     "' completed successfully. rc=" + exitCode);
-                
-                // Run preview build
-                runPreviewBuild(appRepoDir, appName, logsDir, logFile);
+
+                // disable the Languages task in the MetadataInit task based on configuration
+                updateLanguagesTaskConfiguration(false);
+
+                if (exitCode != 0) return;
+
+                // Run Metadata lifecycle without the languages task
+                // just scanning for source-level dependencies
+                runDBBBuild(appRepoDir, appName, logsDir, logFile, "metadata");
                 
                 // Update metadata store owners (Db2 only)
                 updateMetadataStoreOwners(buildGroupName, appName, logFile);
@@ -652,6 +662,113 @@ public class InitApplicationRepository {
             directory, logFile);
     }
     
+    /**
+     * Adds or removes the "Languages" entry from the tasks list of the lifecycle that contains
+     * "MetadataInit" in dbb-build.yaml.
+     *
+     * @param enable {@code true} to include the Languages task, {@code false} to exclude it.
+     */
+    private void updateLanguagesTaskConfiguration(boolean enable) {
+        logger.logMessage("** " + (enable ? "Enabling" : "Disabling") +
+            " the 'Languages' task in the metadata lifecycle of 'dbb-build.yaml'");
+
+        try {
+            String dbbBuildYamlFilePath = configProperties.getProperty("DBB_ZBUILDER") + "/dbb-build.yaml";
+            File dbbBuildYamlFile = new File(dbbBuildYamlFilePath);
+            if (!dbbBuildYamlFile.exists()) {
+                throw new FileNotFoundException(
+                    "The DBB zBuilder dbb-build.yaml file was not found at '" + dbbBuildYamlFilePath + "'.");
+            }
+
+            Yaml yaml = new Yaml();
+            Map<String, Object> dbbBuildYaml;
+            try (FileReader reader = new FileReader(dbbBuildYamlFile)) {
+                dbbBuildYaml = yaml.load(reader);
+            }
+
+            // Find the lifecycle whose tasks list contains "MetadataInit"
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> lifecycles =
+                (List<Map<String, Object>>) dbbBuildYaml.get("lifecycles");
+            if (lifecycles == null) {
+                throw new IllegalStateException(
+                    "No 'lifecycles' section found in '" + dbbBuildYamlFilePath + "'.");
+            }
+
+            Map<String, Object> targetLifecycle = null;
+            for (Map<String, Object> lifecycle : lifecycles) {
+                @SuppressWarnings("unchecked")
+                List<Object> lifecycleTasks = (List<Object>) lifecycle.get("tasks");
+                if (lifecycleTasks != null && lifecycleTasks.contains("MetadataInit")) {
+                    targetLifecycle = lifecycle;
+                    break;
+                }
+            }
+
+            if (targetLifecycle == null) {
+                throw new IllegalStateException(
+                    "No lifecycle containing 'MetadataInit' was found in '" + dbbBuildYamlFilePath + "'.");
+            }
+
+            @SuppressWarnings("unchecked")
+            List<Object> lifecycleTasks = (List<Object>) targetLifecycle.get("tasks");
+
+            boolean alreadyPresent = lifecycleTasks.contains("Languages");
+
+            if (enable && !alreadyPresent) {
+                // Insert "Languages" after "ImpactAnalysis" if present, otherwise before "Finish"
+                int insertIndex = lifecycleTasks.indexOf("ImpactAnalysis");
+                if (insertIndex >= 0) {
+                    lifecycleTasks.add(insertIndex + 1, "Languages");
+                } else {
+                    int finishIndex = lifecycleTasks.indexOf("Finish");
+                    if (finishIndex >= 0) {
+                        lifecycleTasks.add(finishIndex, "Languages");
+                    } else {
+                        lifecycleTasks.add("Languages");
+                    }
+                }
+                logger.logMessage("** 'Languages' task added to the metadata lifecycle.");
+            } else if (!enable && alreadyPresent) {
+                lifecycleTasks.remove("Languages");
+                logger.logMessage("** 'Languages' task removed from the metadata lifecycle.");
+            } else {
+                logger.logMessage("** 'Languages' task is already " + (enable ? "present" : "absent") +
+                    ". No changes made.");
+            }
+
+            // Write updated YAML back, preserving top-level structure order
+            DumperOptions dumperOptions = new DumperOptions();
+            dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+            dumperOptions.setPrettyFlow(true);
+            Yaml yamlWriter = new Yaml(dumperOptions);
+
+            Map<String, Object> output = new LinkedHashMap<>();
+            if (dbbBuildYaml.containsKey("version"))    output.put("version",    dbbBuildYaml.get("version"));
+            if (dbbBuildYaml.containsKey("include"))    output.put("include",    dbbBuildYaml.get("include"));
+            output.put("lifecycles", lifecycles);
+            if (dbbBuildYaml.containsKey("tasks"))      output.put("tasks",      dbbBuildYaml.get("tasks"));
+
+            try (OutputStreamWriter writer = new OutputStreamWriter(
+                    new FileOutputStream(dbbBuildYamlFile), "UTF-8")) {
+                yamlWriter.dump(output, writer);
+            }
+            try {
+                com.ibm.dbb.utils.FileUtils.setFileTag(dbbBuildYamlFile.getAbsolutePath(), "UTF-8");
+            } catch (Exception e) {
+                // Ignore file tagging on non-z/OS systems
+            }
+
+            logger.logMessage("** The 'dbb-build.yaml' file located at '" + dbbBuildYamlFilePath +
+                "' was successfully modified.");
+
+        } catch (Exception e) {
+            exitCode = 8;
+            logger.logMessage("*! [ERROR] Failed to update Languages task configuration: " +
+                e.getMessage() + ". rc=" + exitCode);
+        }
+    }
+
     private void updateZBuilderConfiguration(String appName, String logsDir) throws IOException {
         logger.logMessage("** Updating zBuilder 'dbb-build.yaml' with MetadataInit task configuration");
 
@@ -760,14 +877,15 @@ public class InitApplicationRepository {
         }
     }
 
-    private void runPreviewBuild(File appRepoDir, String appName, String logsDir, String logFile) throws IOException {
+    private void runDBBBuild(File appRepoDir, String appName, String logsDir, String logFile,
+            String lifecycle) throws IOException {
         if (exitCode != 0) return;
-        
-        logger.logMessage("** Preview Build of application '" + appName + "' started");
-        
+
+        logger.logMessage("** DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") started");
+
         // Create application log directory
         File appLogDir = new File(appRepoDir, "logs");
-        
+
         // Only zBuilder is supported
         String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
         String dbbHome = System.getenv("DBB_HOME");
@@ -777,32 +895,34 @@ public class InitApplicationRepository {
         updateZBuilderConfiguration(appName, logsDir);
         if (exitCode != 0) return;
 
-        
         Map<String, String> env = new HashMap<>(System.getenv());
         env.put("DBB_BUILD", zBuilderPath);
-        
+
         List<String> command = new ArrayList<>();
         command.add(dbbHome + "/bin/dbb");
         command.add("build");
-        command.add("metadata");
+        command.add(lifecycle);
         command.add("--hlq");
         command.add(configProperties.getProperty("APPLICATION_ARTIFACTS_HLQ"));
-//        command.add("--preview");
-        
+
+        if ("full".equals(lifecycle)) {
+            command.add("--preview");
+        }
+
         if ("db2".equals(metadataStoreType)) {
             command.add("--dbid");
             command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_ID"));
             command.add("--dbpf");
             command.add(configProperties.getProperty("DBB_MODELER_DB2_METADATASTORE_JDBC_PASSWORDFILE"));
         }
-        
+
         executeCommandWithEnv(command, appRepoDir,
-            new File(appLogDir, "build-preview-" + appName + ".log").getAbsolutePath(), env);
-        
+            new File(appLogDir, "build-" + lifecycle + "-" + appName + ".log").getAbsolutePath(), env);
+
         if (exitCode == 0) {
-            logger.logMessage("** Preview Build of application '" + appName + "' completed successfully. rc=" + exitCode);
+            logger.logMessage("** DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") completed successfully. rc=" + exitCode);
         } else {
-            logger.logMessage("*! [ERROR] Preview Build of application '" + appName + "' failed. rc=" + exitCode);
+            logger.logMessage("*! [ERROR] DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") failed. rc=" + exitCode);
             logger.logMessage("** Build logs and reports available at '" + logFile + "' and '" + appLogDir.getAbsolutePath() + "'");
         }
     }
@@ -864,6 +984,43 @@ public class InitApplicationRepository {
             version = "rel-1.0.0";
         }
         
+        // Run Full lifecycle without the languages task
+        // just scanning for source-level dependencies
+        runDBBBuild(appRepoDir, appName, logsDir, logFile, "full");
+
+        if (exitCode != 0) return;
+
+        // Verify that all EXECUTE outputs from the full build exist on the system
+        List<String> missingOutputs = verifyBuildOutputs(appRepoDir, appName);
+        if (!missingOutputs.isEmpty()) {
+            logger.logMessage("*! [ERROR] The following EXECUTE outputs from the full build were not found. " +
+                "Skipping metadata lifecycle and metadata store owner update.");
+            for (String dsn : missingOutputs) {
+                logger.logMessage("*!   Missing output: " + dsn);
+            }
+            return;
+        }
+
+        if (exitCode != 0) {
+            logger.logMessage("*! [ERROR] Build output verification failed. " +
+                "Skipping metadata lifecycle and metadata store owner update. rc=" + exitCode);
+            return;
+        }
+
+        // Enable the Languages task in the MetadataInit task based on configuration
+        updateLanguagesTaskConfiguration(true);
+
+
+        // Run Metadata lifecycle with the languages task
+        // scanning for source-level and output-level dependencies
+        // only if all the output objects exist
+        runDBBBuild(appRepoDir, appName, logsDir, logFile, "metadata");
+
+        // Update metadata store owners (Db2 only)
+        updateMetadataStoreOwners(buildGroupName, appName, logFile);
+
+
+
         String dbbHome = System.getenv("DBB_HOME");
         String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
         String pipelineUser = configProperties.getProperty("PIPELINE_USER");
@@ -901,6 +1058,102 @@ public class InitApplicationRepository {
         }
     }
     
+    /**
+     * Reads the DBB Build Report produced by the most recent build of the given application,
+     * collects all output datasets created by EXECUTE records, and checks via JZOS that each
+     * dataset actually exists on the system.
+     *
+     * @param appRepoDir the application repository directory (build reports are under logs/)
+     * @param appName    the application name (used for logging)
+     * @return a list of dataset names that were referenced in the build report but do not exist;
+     *         an empty list means all outputs are present.
+     */
+    private List<String> verifyBuildOutputs(File appRepoDir, String appName) {
+        logger.logMessage("** Verifying EXECUTE outputs from the full build report for application '" + appName + "'");
+
+        List<String> missingOutputs = new ArrayList<>();
+
+        try {
+            // The build report is written to the logs directory under the app repo
+            File buildReportFile = new File(new File(appRepoDir, "logs"), "buildReport.json");
+            if (!buildReportFile.exists()) {
+                exitCode = 8;
+                logger.logMessage("*! [ERROR] Build report not found at '" +
+                    buildReportFile.getAbsolutePath() + "'. Cannot verify build outputs. rc=" + exitCode);
+                return missingOutputs;
+            }
+
+            // Load the build report using the DBB API
+            BuildReport buildReport;
+            try (FileInputStream fis = new FileInputStream(buildReportFile)) {
+                buildReport = BuildReport.parse(fis);
+            }
+
+            // Retrieve all EXECUTE records from the build report
+            List<ExecuteRecord> executeRecords = buildReport.getRecords(
+                DefaultRecordFactory.TYPE_EXECUTE, ExecuteRecord.class);
+
+            if (executeRecords == null || executeRecords.isEmpty()) {
+                logger.logMessage("** No EXECUTE records found in build report. Nothing to verify.");
+                return missingOutputs;
+            }
+
+            logger.logMessage("** Found " + executeRecords.size() + " EXECUTE record(s). Verifying outputs...");
+
+            for (ExecuteRecord record : executeRecords) {
+                List<String> outputs = record.getOutputs();
+                if (outputs == null) continue;
+
+                for (String dsn : outputs) {
+                    if (dsn == null || dsn.trim().isEmpty()) continue;
+
+                    // Normalise: strip surrounding quotes and whitespace
+                    String normalised = dsn.trim().replaceAll("^['\"]|['\"]$", "").toUpperCase();
+
+                    // Determine whether this is a PDS member (e.g. MY.LIB(MEMBER)) or a plain dataset
+                    boolean exists = false;
+                    int memberStart = normalised.indexOf('(');
+                    try {
+                        if (memberStart > 0 && normalised.endsWith(")")) {
+                            // PDS member: check the PDS exists first, then the member
+                            String pdsName   = normalised.substring(0, memberStart);
+                            String memberName = normalised.substring(memberStart + 1, normalised.length() - 1);
+                            if (ZFile.dsExists(pdsName)) {
+                                exists = ZFile.memberExists("//" + pdsName + "(" + memberName + ")");
+                            }
+                        } else {
+                            exists = ZFile.dsExists(normalised);
+                        }
+                    } catch (Exception e) {
+                        logger.logMessage("*! [WARNING] Could not check existence of '" +
+                            normalised + "': " + e.getMessage());
+                        // Treat as missing to be safe
+                    }
+
+                    if (!exists) {
+                        logger.logMessage("*!   Output not found: " + normalised);
+                        missingOutputs.add(normalised);
+                    } else {
+                        logger.logSilentMessage("**   Output exists: " + normalised);
+                    }
+                }
+            }
+
+            if (missingOutputs.isEmpty()) {
+                logger.logMessage("** All EXECUTE outputs verified successfully for application '" + appName + "'.");
+            } else {
+                logger.logMessage("*! [ERROR] " + missingOutputs.size() + " output dataset(s) missing for application '" + appName + "'.");
+            }
+
+        } catch (Exception e) {
+            logger.logMessage("*! [ERROR] Failed to verify build outputs for application '" + appName +
+                "': " + e.getMessage());
+            // Return what we have so far; caller will act on non-empty list
+        }
+
+        return missingOutputs;
+    }
+
     private String extractVersionFromDescriptor(File appRepoDir, String appName, String defaultBranch) {
         try {
             File descriptorFile = new File(appRepoDir, "applicationDescriptor.yml");
