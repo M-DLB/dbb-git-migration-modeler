@@ -787,6 +787,25 @@ public class InitApplicationRepository {
                 // Ignore file tagging on non-z/OS systems
             }
 
+            // Replace "ImpactAnalysis" with "FullAnalysis" in the "metadata" lifecycle task list
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> lifecycles = (List<Map<String, Object>>) dbbBuildYaml.get("lifecycles");
+            if (lifecycles != null) {
+                for (Map<String, Object> lifecycle : lifecycles) {
+                    if ("metadata".equals(lifecycle.get("lifecycle"))) {
+                        @SuppressWarnings("unchecked")
+                        List<Object> lifecycleTasks = (List<Object>) lifecycle.get("tasks");
+                        if (lifecycleTasks != null) {
+                            int impactIndex = lifecycleTasks.indexOf("ImpactAnalysis");
+                            if (impactIndex >= 0) {
+                                lifecycleTasks.set(impactIndex, "FullAnalysis");
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
             // Find or create the MetadataInit task
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> tasks = (List<Map<String, Object>>) dbbBuildYaml.get("tasks");
