@@ -287,7 +287,7 @@ public class InitApplicationRepository {
 
                     // Package and publish artifacts if enabled (requires SCAN_OUTPUTS=true)
                     if ("true".equals(configProperties.getProperty("PUBLISH_ARTIFACTS", "false"))) {
-                        logger.logMessage("** Scanning outputs for application '" + appName + "' started (SCAN_OUTPUTS=true)")
+                        logger.logMessage("** Scanning outputs for application '" + appName + "' started (SCAN_OUTPUTS=true)");
                         publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
                     }
                 }
