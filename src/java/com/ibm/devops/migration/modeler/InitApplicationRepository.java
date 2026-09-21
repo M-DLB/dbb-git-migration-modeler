@@ -1172,7 +1172,7 @@ public class InitApplicationRepository {
             }
 
             if (missingOutputs.isEmpty()) {
-                logger.logMessage("*** All EXECUTE outputs verified successfully for application '" + appName + "'.");
+                logger.logMessage("**** All expected output artifacts verified successfully for application '" + appName + "'.");
             } else {
                 logger.logMessage("*! [ERROR] " + missingOutputs.size() + " output dataset(s) missing for application '" + appName + "'.");
             }
