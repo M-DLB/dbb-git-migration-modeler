@@ -190,13 +190,11 @@ public class Setup {
         System.out.println("[SETUP] DBB Git Migration Modeler input configuration");
         for (String key : INPUT_KEYS) {
             config.setProperty(key, prompt("Specify input parameter " + key, config.getProperty(key, "")));
-        }
-
-        // Conditional: if SCAN_OUTPUTS is enabled, prompt for APPLICATION_ARTIFACTS_HLQ
-        if ("true".equals(config.getProperty("SCAN_OUTPUTS"))) {
-            config.setProperty("APPLICATION_ARTIFACTS_HLQ",
-                prompt("Specify the HLQ for application artifacts (APPLICATION_ARTIFACTS_HLQ)",
-                    config.getProperty("APPLICATION_ARTIFACTS_HLQ", "")));
+            if ("SCAN_OUTPUTS".equals(key) && "true".equals(config.getProperty("SCAN_OUTPUTS"))) {
+                config.setProperty("APPLICATION_ARTIFACTS_HLQ",
+                    prompt("Specify input parameter APPLICATION_ARTIFACTS_HLQ",
+                        config.getProperty("APPLICATION_ARTIFACTS_HLQ", "")));
+            }
         }
 
         // ----------------------------------------------------------------
