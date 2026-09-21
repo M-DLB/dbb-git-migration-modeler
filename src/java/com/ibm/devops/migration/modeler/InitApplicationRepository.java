@@ -261,6 +261,7 @@ public class InitApplicationRepository {
                 logger.logMessage("** Initializing Git repository for application '" + appName +
                     "' completed successfully. rc=" + exitCode);
 
+                logger.logMessage("** Scanning source-level dependency information started.");
                 // Update the zBuilder dbb-build.yaml with the MetadataInit task configuration
                 updateZBuilderConfiguration(appName, logsDir);
 
@@ -279,12 +280,14 @@ public class InitApplicationRepository {
 
                 // If SCAN_OUTPUTS is enabled: run full build + metadata with languages
                 if ("true".equals(configProperties.getProperty("SCAN_OUTPUTS", "false"))) {
+                    logger.logMessage("** Scanning outputs for application '" + appName + "' started (SCAN_OUTPUTS=true)");
                     scanOutputs(appRepoDir, appName, defaultBranch, logsDir, logFile, buildGroupName);
 
                     if (exitCode != 0) return;
 
                     // Package and publish artifacts if enabled (requires SCAN_OUTPUTS=true)
                     if ("true".equals(configProperties.getProperty("PUBLISH_ARTIFACTS", "false"))) {
+                        logger.logMessage("** Scanning outputs for application '" + appName + "' started (SCAN_OUTPUTS=true)")
                         publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
                     }
                 }
@@ -892,7 +895,7 @@ public class InitApplicationRepository {
             String lifecycle) throws IOException {
         if (exitCode != 0) return;
 
-        logger.logMessage("** DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") started");
+        logger.logMessage("*** DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") started");
 
         // Create application log directory
         File appLogDir = new File(appRepoDir, "logs");
@@ -927,10 +930,10 @@ public class InitApplicationRepository {
             new File(appLogDir, "build-" + lifecycle + "-" + appName + ".log").getAbsolutePath(), env);
 
         if (exitCode == 0) {
-            logger.logMessage("** DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") completed successfully. rc=" + exitCode);
+            logger.logMessage("*** DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") completed successfully. rc=" + exitCode);
         } else {
             logger.logMessage("*! [ERROR] DBB Build of application '" + appName + "' (lifecycle: " + lifecycle + ") failed. rc=" + exitCode);
-            logger.logMessage("** Build logs and reports available at '" + logFile + "' and '" + appLogDir.getAbsolutePath() + "'");
+            logger.logMessage("*** Build logs and reports available at '" + logFile + "' and '" + appLogDir.getAbsolutePath() + "'");
         }
     }
     
@@ -981,8 +984,7 @@ public class InitApplicationRepository {
             String logFile, String buildGroupName) throws IOException {
         if (exitCode != 0) return;
 
-        logger.logMessage("** Scanning outputs for application '" + appName + "' started (SCAN_OUTPUTS=true)");
-
+        logger.logMessage("*** Perform a full build lifecycle in preview mode. No binaries will be created.");
         // Run Full lifecycle to compile/link and produce output datasets
         runDBBBuild(appRepoDir, appName, logsDir, logFile, "full");
 
@@ -1006,10 +1008,13 @@ public class InitApplicationRepository {
             return;
         }
 
+        logger.logMessage("*** Perform a full build lifecycle in preview mode. No binaries will be created.");
         // Enable the Languages task in the MetadataInit task
         updateLanguagesTaskConfiguration(true);
 
         if (exitCode != 0) return;
+
+        logger.logMessage("*** Start scanning source and build outputs for dependencies.");
 
         // Run Metadata lifecycle with the languages task
         // scanning for source-level and output-level dependencies
@@ -1021,7 +1026,7 @@ public class InitApplicationRepository {
         updateMetadataStoreOwners(buildGroupName, appName, logFile);
 
         if (exitCode == 0) {
-            logger.logMessage("** Scanning outputs for application '" + appName +
+            logger.logMessage("*** Scanning outputs for application '" + appName +
                 "' completed successfully. rc=" + exitCode);
         } else {
             logger.logMessage("*! [ERROR] Scanning outputs for application '" + appName +
@@ -1094,7 +1099,7 @@ public class InitApplicationRepository {
      *         an empty list means all outputs are present.
      */
     private List<String> verifyBuildOutputs(File appRepoDir, String appName) {
-        logger.logSilentMessage("** Verifying EXECUTE outputs from the full build report for application '" + appName + "'");
+        logger.logMessage("*** Inspect if configured build output libraries (APPLICATION_ARTIFACTS_HLQ) contain the expected output artifacts for application '" + appName + "'");     
 
         List<String> missingOutputs = new ArrayList<>();
 
@@ -1123,7 +1128,7 @@ public class InitApplicationRepository {
             }
 
             if (executeRecords.isEmpty()) {
-                logger.logMessage("** No EXECUTE records found in build report. Nothing to verify.");
+                logger.logMessage("*** No EXECUTE records found in build report. Nothing to verify.");
                 return missingOutputs;
             }
 
@@ -1167,7 +1172,7 @@ public class InitApplicationRepository {
             }
 
             if (missingOutputs.isEmpty()) {
-                logger.logMessage("** All EXECUTE outputs verified successfully for application '" + appName + "'.");
+                logger.logMessage("*** All EXECUTE outputs verified successfully for application '" + appName + "'.");
             } else {
                 logger.logMessage("*! [ERROR] " + missingOutputs.size() + " output dataset(s) missing for application '" + appName + "'.");
             }
