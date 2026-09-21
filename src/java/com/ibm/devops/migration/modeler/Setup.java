@@ -40,7 +40,6 @@ public class Setup {
         "APPLICATION_TYPES_MAPPING",
         "TYPE_CONFIGURATIONS_FILE",
         "INTERACTIVE_RUN",
-        "APPLICATION_ARTIFACTS_HLQ",
         "SCAN_CONTROL_TRANSFERS",
         "SCAN_DATASET_MEMBERS",
         "SCAN_DATASET_MEMBERS_ENCODING",
@@ -51,6 +50,7 @@ public class Setup {
         "GIT_COMMIT_MESSAGE",
         "GIT_TAG_RELEASE",
         "MOVE_FILES_FLAG",
+        "SCAN_OUTPUTS",
         "PUBLISH_ARTIFACTS"
     };
 
@@ -128,6 +128,7 @@ public class Setup {
         config.setProperty("REPOSITORY_PATH_MAPPING_FILE",          modelerWork + "/config/repositoryPathsMapping.yaml");
         config.setProperty("APPLICATION_TYPES_MAPPING",             modelerWork + "/config/types/typesMapping.yaml");
         config.setProperty("TYPE_CONFIGURATIONS_FILE",              modelerWork + "/config/types/typesConfigurations.yaml");
+        config.setProperty("SCAN_OUTPUTS",                          "false");
         config.setProperty("APPLICATION_ARTIFACTS_HLQ",             "DBEHM.MIG");
         config.setProperty("SCAN_DATASET_MEMBERS",                  "false");
         config.setProperty("SCAN_DATASET_MEMBERS_ENCODING",         "IBM-1047");
@@ -189,6 +190,13 @@ public class Setup {
         System.out.println("[SETUP] DBB Git Migration Modeler input configuration");
         for (String key : INPUT_KEYS) {
             config.setProperty(key, prompt("Specify input parameter " + key, config.getProperty(key, "")));
+        }
+
+        // Conditional: if SCAN_OUTPUTS is enabled, prompt for APPLICATION_ARTIFACTS_HLQ
+        if ("true".equals(config.getProperty("SCAN_OUTPUTS"))) {
+            config.setProperty("APPLICATION_ARTIFACTS_HLQ",
+                prompt("Specify the HLQ for application artifacts (APPLICATION_ARTIFACTS_HLQ)",
+                    config.getProperty("APPLICATION_ARTIFACTS_HLQ", "")));
         }
 
         // ----------------------------------------------------------------
@@ -365,6 +373,7 @@ public class Setup {
                     writer.println(key + "=" + config.getProperty(key, ""));
                 }
             }
+            writer.println("APPLICATION_ARTIFACTS_HLQ=" + config.getProperty("APPLICATION_ARTIFACTS_HLQ", ""));
             for (String key : PUBLISHING_KEYS) {
                 writer.println(key + "=" + config.getProperty(key, ""));
             }

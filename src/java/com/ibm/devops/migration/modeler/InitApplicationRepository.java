@@ -274,12 +274,20 @@ public class InitApplicationRepository {
                 // Run Metadata lifecycle without the languages task
                 // just scanning for source-level dependencies
                 runDBBBuild(appRepoDir, appName, logsDir, logFile, "metadata");
-                
-                // Update metadata store owners (Db2 only)
-                updateMetadataStoreOwners(buildGroupName, appName, logFile);
-                
-                // Publish artifacts if enabled
-                publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile, buildGroupName);
+
+                if (exitCode != 0) return;
+
+                // If SCAN_OUTPUTS is enabled: run full build + metadata with languages
+                if ("true".equals(configProperties.getProperty("SCAN_OUTPUTS", "false"))) {
+                    scanOutputs(appRepoDir, appName, defaultBranch, logsDir, logFile, buildGroupName);
+
+                    if (exitCode != 0) return;
+
+                    // Package and publish artifacts if enabled (requires SCAN_OUTPUTS=true)
+                    if ("true".equals(configProperties.getProperty("PUBLISH_ARTIFACTS", "false"))) {
+                        publishArtifacts(appRepoDir, appName, defaultBranch, logsDir, logFile);
+                    }
+                }
             } else {
                 logger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
                     "' failed. rc=" + exitCode);
@@ -965,26 +973,17 @@ public class InitApplicationRepository {
         }
     }
     
-    private void publishArtifacts(File appRepoDir, String appName, String defaultBranch, String logsDir, String logFile, String buildGroupName) throws IOException {
+    /**
+     * Runs the full build, verifies outputs, then re-runs the metadata lifecycle with the
+     * Languages task enabled.  Called when SCAN_OUTPUTS=true.
+     */
+    private void scanOutputs(File appRepoDir, String appName, String defaultBranch, String logsDir,
+            String logFile, String buildGroupName) throws IOException {
         if (exitCode != 0) return;
-        
-        String publishArtifacts = configProperties.getProperty("PUBLISH_ARTIFACTS", "false");
-        if (!"true".equals(publishArtifacts)) {
-            return;
-        }
-        
-        logger.logMessage("** Creating baseline package of application '" + appName + "' started");
-        
-        File appLogDir = new File(appRepoDir, "logs");
-        appLogDir.mkdirs();
-        
-        String version = extractVersionFromDescriptor(appRepoDir, appName, defaultBranch);
-        if (version == null || version.isEmpty()) {
-            version = "rel-1.0.0";
-        }
 
-        // Run Full lifecycle without the languages task
-        // just scanning for source-level dependencies
+        logger.logMessage("** Scanning outputs for application '" + appName + "' started (SCAN_OUTPUTS=true)");
+
+        // Run Full lifecycle to compile/link and produce output datasets
         runDBBBuild(appRepoDir, appName, logsDir, logFile, "full");
 
         if (exitCode != 0) return;
@@ -993,35 +992,66 @@ public class InitApplicationRepository {
         List<String> missingOutputs = verifyBuildOutputs(appRepoDir, appName);
         if (!missingOutputs.isEmpty()) {
             logger.logMessage("*! [ERROR] The following EXECUTE outputs from the full build were not found. " +
-                "Skipping metadata lifecycle and metadata store owner update.");
+                "Skipping metadata lifecycle with languages.");
             for (String dsn : missingOutputs) {
                 logger.logMessage("*!   Missing output: " + dsn);
             }
+            exitCode = 8;
             return;
         }
 
         if (exitCode != 0) {
             logger.logMessage("*! [ERROR] Build output verification failed. " +
-                "Skipping metadata lifecycle and metadata store owner update. rc=" + exitCode);
+                "Skipping metadata lifecycle with languages. rc=" + exitCode);
             return;
         }
 
-        // Enable the Languages task in the MetadataInit task based on configuration
+        // Enable the Languages task in the MetadataInit task
         updateLanguagesTaskConfiguration(true);
+
+        if (exitCode != 0) return;
 
         // Run Metadata lifecycle with the languages task
         // scanning for source-level and output-level dependencies
-        // only if all the output objects exist
         runDBBBuild(appRepoDir, appName, logsDir, logFile, "metadata");
+
+        if (exitCode != 0) return;
 
         // Update metadata store owners (Db2 only)
         updateMetadataStoreOwners(buildGroupName, appName, logFile);
+
+        if (exitCode == 0) {
+            logger.logMessage("** Scanning outputs for application '" + appName +
+                "' completed successfully. rc=" + exitCode);
+        } else {
+            logger.logMessage("*! [ERROR] Scanning outputs for application '" + appName +
+                "' failed. rc=" + exitCode);
+        }
+    }
+
+    /**
+     * Packages and publishes a baseline artifact using PackageBuildOutputs.
+     * Called when PUBLISH_ARTIFACTS=true.
+     */
+    private void publishArtifacts(File appRepoDir, String appName, String defaultBranch, String logsDir,
+            String logFile) throws IOException {
+        if (exitCode != 0) return;
+
+        logger.logMessage("** Creating baseline package of application '" + appName + "' started");
+
+        File appLogDir = new File(appRepoDir, "logs");
+        appLogDir.mkdirs();
+
+        String version = extractVersionFromDescriptor(appRepoDir, appName, defaultBranch);
+        if (version == null || version.isEmpty()) {
+            version = "rel-1.0.0";
+        }
 
         String dbbHome = System.getenv("DBB_HOME");
         String dbbCommunityRepo = configProperties.getProperty("DBB_COMMUNITY_REPO");
         String pipelineUser = configProperties.getProperty("PIPELINE_USER");
         String pipelineUserGroup = configProperties.getProperty("PIPELINE_USER_GROUP");
-        
+
         List<String> command = Arrays.asList(
             dbbHome + "/bin/groovyz",
             dbbCommunityRepo + "/Pipeline/PackageBuildOutputs/PackageBuildOutputs.groovy",
@@ -1039,10 +1069,10 @@ public class InitApplicationRepository {
             "--artifactRepositoryDirectory", "release",
             "--artifactRepositoryName", appName + "-" + configProperties.getProperty("ARTIFACT_REPOSITORY_SUFFIX")
         );
-        
-        executeCommand(command, null, 
+
+        executeCommand(command, null,
             new File(appLogDir, "packaging-preview-" + appName + ".log").getAbsolutePath());
-        
+
         if (exitCode == 0) {
             logger.logMessage("** Creation of Baseline Package of application '" + appName +
                 "' completed successfully. rc=" + exitCode);
@@ -1053,7 +1083,6 @@ public class InitApplicationRepository {
                 new File(appLogDir, "packaging-preview-" + appName + ".log").getAbsolutePath() + "'");
         }
     }
-    
     /**
      * Reads the DBB Build Report produced by the most recent build of the given application,
      * collects all output datasets created by EXECUTE records, and checks via JZOS that each
