@@ -1025,7 +1025,6 @@ public class InitApplicationRepository {
             return;
         }
 
-        logger.logMessage("*** Perform a full build lifecycle in preview mode. No binaries will be created.");
         // Enable the Languages task in the MetadataInit task
         updateLanguagesTaskConfiguration(true);
 
