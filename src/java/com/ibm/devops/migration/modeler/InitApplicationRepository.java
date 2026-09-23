@@ -26,7 +26,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
 import java.nio.file.*;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -40,6 +39,7 @@ public class InitApplicationRepository {
     private Properties configProperties;
     private int exitCode = 0;
     private Logger logger;
+    private String localZBuilderPath;
     
     public static void main(String[] args) {
         InitApplicationRepository initializer = new InitApplicationRepository();
@@ -175,30 +175,48 @@ public class InitApplicationRepository {
         String logsDir = configProperties.getProperty("DBB_MODELER_LOGS");
         String defaultBranch = configProperties.getProperty("APPLICATION_DEFAULT_BRANCH", "main");
         String currentBranch = configProperties.getProperty("APPLICATION_CURRENT_BRANCH", "main");
-        
+
+        // Resolve the local zBuilder copy that was placed in the work folder by MigrationOrchestrator
+        String workDir = configProperties.getProperty("DBB_MODELER_WORK");
+        localZBuilderPath = workDir + "/zBuilder";
+
         if (applicationDir == null || applicationDir.isEmpty()) {
             exitCode = 8;
             logger.logMessage("[ERROR] DBB_MODELER_APPLICATION_DIR not configured. rc=" + exitCode);
             return;
         }
-        
+
         if (applicationFilter == null || applicationFilter.isEmpty()) {
             exitCode = 8;
             logger.logMessage("[ERROR] Application name is required. rc=" + exitCode);
             return;
         }
-        
+
         String appName = applicationFilter.trim();
         File appRepoDir = new File(applicationDir, appName);
-        
+
         if (!appRepoDir.exists() || !appRepoDir.isDirectory()) {
             exitCode = 8;
             logger.logMessage("[ERROR] Application directory does not exist: " + appRepoDir.getAbsolutePath() + ". rc=" + exitCode);
             return;
         }
-        
+
         String logFile = logsDir + File.separator + "5-" + appName + "-initApplicationRepository.log";
-        
+
+        // Back up dbb-build.yaml once at the start; restore it in the finally block
+        File dbbBuildYaml = new File(localZBuilderPath, "dbb-build.yaml");
+        File dbbBuildYamlBackup = new File(localZBuilderPath, "dbb-build.yaml.bak");
+        try {
+            if (dbbBuildYaml.exists()) {
+                Files.copy(dbbBuildYaml.toPath(), dbbBuildYamlBackup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                logger.logMessage("** Backed up '" + dbbBuildYaml.getAbsolutePath() + "' to '" + dbbBuildYamlBackup.getAbsolutePath() + "'");
+            }
+        } catch (IOException e) {
+            exitCode = 8;
+            logger.logMessage("*! [ERROR] Failed to back up dbb-build.yaml: " + e.getMessage() + ". rc=" + exitCode);
+            return;
+        }
+
         try {
             // Check if already a Git repository
             if (isGitRepository(appRepoDir)) {
@@ -210,53 +228,53 @@ public class InitApplicationRepository {
             }
 
             if (exitCode != 0) return;
-            
+
             // Reset DBB Metadatastore buildGroup
             String buildGroupName = appName + "-" + defaultBranch;
             resetBuildGroup(buildGroupName, appName, logFile);
-            
-            if (exitCode != 0) return;        
-            
+
+            if (exitCode != 0) return;
+
             // Copy .gitattributes file
             copyGitAttributes(appRepoDir, logFile);
-            
+
             if (exitCode != 0) return;
-            
+
             // Create .gitignore file
             createGitIgnore(appRepoDir);
-            
+
             if (exitCode != 0) return;
-            
+
             // Copy and customize ZAPP file
             customizeZappFile(appRepoDir, appName, logFile);
-            
+
             if (exitCode != 0) return;
-            
+
             // Create baselineReference.config file
             createBaselineReferenceConfig(appRepoDir, appName, defaultBranch);
-            
+
             if (exitCode != 0) return;
-            
+
             // Create IDZ project file
             createIdzProjectFile(appRepoDir, appName);
-            
+
             if (exitCode != 0) return;
-            
+
             // Prepare pipeline configuration
             preparePipelineConfiguration(appRepoDir, appName, logFile);
-            
+
             if (exitCode != 0) return;
-            
+
             // Git operations: status, add, commit
             performGitOperations(appRepoDir, currentBranch, defaultBranch, logFile);
-            
+
             if (exitCode != 0) return;
-            
+
             // Create tag and release branch
             if (configProperties.getProperty("GIT_TAG_RELEASE") != null && configProperties.getProperty("GIT_TAG_RELEASE").equalsIgnoreCase("true")) {
                 createTagAndReleaseBranch(appRepoDir, appName, defaultBranch, logFile);
             }
-            
+
             if (exitCode == 0) {
                 logger.logMessage("** Initializing Git repository for application '" + appName +
                     "' completed successfully. rc=" + exitCode);
@@ -267,7 +285,7 @@ public class InitApplicationRepository {
 
                 if (exitCode != 0) return;
 
-                // disable the Languages task in the MetadataInit task based on configuration
+                // Disable the Languages task in the MetadataInit task based on configuration
                 updateLanguagesTaskConfiguration(false);
 
                 if (exitCode != 0) return;
@@ -295,12 +313,23 @@ public class InitApplicationRepository {
                 logger.logMessage("*! [ERROR] Initializing Git repository for application '" + appName +
                     "' failed. rc=" + exitCode);
             }
-            
+
         } catch (Exception e) {
             exitCode = 8;
             logger.logMessage("*! [ERROR] Failed to initialize repository for '" + appName + "': " +
                 e.getMessage() + ". rc=" + exitCode);
             e.printStackTrace();
+        } finally {
+            // Restore the original dbb-build.yaml from the backup
+            if (dbbBuildYamlBackup.exists()) {
+                try {
+                    Files.copy(dbbBuildYamlBackup.toPath(), dbbBuildYaml.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    dbbBuildYamlBackup.delete();
+                    logger.logMessage("** Restored '" + dbbBuildYaml.getAbsolutePath() + "' from backup");
+                } catch (IOException e) {
+                    logger.logMessage("*! [WARNING] Failed to restore dbb-build.yaml from backup: " + e.getMessage());
+                }
+            }
         }
     }
     
@@ -686,7 +715,7 @@ public class InitApplicationRepository {
      */
     private void updateLanguagesTaskConfiguration(boolean enable) {
         try {
-            String dbbBuildYamlFilePath = configProperties.getProperty("DBB_ZBUILDER") + "/dbb-build.yaml";
+            String dbbBuildYamlFilePath = localZBuilderPath + "/dbb-build.yaml";
             File dbbBuildYamlFile = new File(dbbBuildYamlFilePath);
             if (!dbbBuildYamlFile.exists()) {
                 throw new FileNotFoundException(
@@ -774,7 +803,7 @@ public class InitApplicationRepository {
 
     private void updateZBuilderConfiguration(String appName, String logsDir) throws IOException {
         try {
-            String dbbBuildYamlFilePath = configProperties.getProperty("DBB_ZBUILDER") + "/dbb-build.yaml";
+            String dbbBuildYamlFilePath = localZBuilderPath + "/dbb-build.yaml";
             File dbbBuildYamlFile = new File(dbbBuildYamlFilePath);
             if (!dbbBuildYamlFile.exists()) {
                 throw new FileNotFoundException(
@@ -785,17 +814,6 @@ public class InitApplicationRepository {
             Map<String, Object> dbbBuildYaml;
             try (FileReader reader = new FileReader(dbbBuildYamlFile)) {
                 dbbBuildYaml = yaml.load(reader);
-            }
-
-            // Create a timestamped backup
-            String timestamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
-            String backupFilePath = configProperties.getProperty("DBB_ZBUILDER") + "/dbb-build-backup-" + timestamp + ".yaml";
-            Files.copy(Paths.get(dbbBuildYamlFilePath), Paths.get(backupFilePath), StandardCopyOption.COPY_ATTRIBUTES);
-            try {
-                com.ibm.dbb.utils.FileUtils.setFileTag(backupFilePath,
-                    com.ibm.dbb.utils.FileUtils.getFileTag(dbbBuildYamlFilePath));
-            } catch (Exception e) {
-                // Ignore file tagging on non-z/OS systems
             }
 
             // Replace "ImpactAnalysis" with "FullAnalysis" in the "metadata" lifecycle task list
@@ -903,10 +921,9 @@ public class InitApplicationRepository {
         // Only zBuilder is supported
         String metadataStoreType = configProperties.getProperty("DBB_MODELER_METADATASTORE_TYPE");
         String dbbHome = System.getenv("DBB_HOME");
-        String zBuilderPath = configProperties.getProperty("DBB_ZBUILDER");
 
         Map<String, String> env = new HashMap<>(System.getenv());
-        env.put("DBB_BUILD", zBuilderPath);
+        env.put("DBB_BUILD", localZBuilderPath);
 
         List<String> command = new ArrayList<>();
         command.add(dbbHome + "/bin/dbb");

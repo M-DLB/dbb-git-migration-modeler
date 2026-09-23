@@ -9,6 +9,8 @@
 
 package com.ibm.devops.migration.modeler;
 
+import com.ibm.devops.migration.modeler.utils.FileUtility;
+
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -78,10 +80,15 @@ public class MigrationOrchestrator {
             return;
         }
         
-        // Phase 5: Initialize application repositories
+        // Phase 5: Copy zBuilder installation into the work folder (fresh copy each run)
+        if (!copyZBuilderToWorkDir()) {
+            return;
+        }
+
+        // Phase 6: Initialize application repositories
         boolean repositoriesInitialized = initializeRepositories();
         
-        // Phase 6: Print summary
+        // Phase 7: Print summary
         printSummary(repositoriesInitialized);
     }
     
@@ -445,6 +452,65 @@ public class MigrationOrchestrator {
         }
     }
     
+    private boolean copyZBuilderToWorkDir() {
+        System.out.println();
+        System.out.println("[PHASE] Copying zBuilder installation into the Migration Modeler work folder");
+
+        String zBuilderSrc = config.getProperty("DBB_ZBUILDER");
+        String workDir     = config.getProperty("DBB_MODELER_WORK");
+
+        if (zBuilderSrc == null || zBuilderSrc.isEmpty()) {
+            System.err.println("[ERROR] DBB_ZBUILDER is not set in the configuration.");
+            exitCode = 8;
+            return false;
+        }
+        if (workDir == null || workDir.isEmpty()) {
+            System.err.println("[ERROR] DBB_MODELER_WORK is not set in the configuration.");
+            exitCode = 8;
+            return false;
+        }
+
+        File srcDir  = new File(zBuilderSrc);
+        File destDir = new File(workDir, "zBuilder");
+
+        if (!srcDir.isDirectory()) {
+            System.err.println("[ERROR] DBB_ZBUILDER source directory does not exist: " + zBuilderSrc);
+            exitCode = 8;
+            return false;
+        }
+
+        try {
+            // Remove any previous copy so we always start fresh
+            if (destDir.exists()) {
+                deleteDirectory(destDir.getAbsolutePath());
+            }
+            copyDirectory(srcDir, destDir);
+            System.out.println("[INFO] zBuilder copied from '" + zBuilderSrc + "' to '" + destDir.getAbsolutePath() + "'");
+            return true;
+        } catch (IOException e) {
+            System.err.println("[ERROR] Failed to copy zBuilder to work directory: " + e.getMessage());
+            exitCode = 8;
+            return false;
+        }
+    }
+
+    private void copyDirectory(File source, File target) throws IOException {
+        if (!target.exists()) {
+            target.mkdirs();
+        }
+        File[] files = source.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                File dest = new File(target, file.getName());
+                if (file.isDirectory()) {
+                    copyDirectory(file, dest);
+                } else {
+                    FileUtility.copyFileWithTags(file, dest);
+                }
+            }
+        }
+    }
+
     private boolean initializeRepositories() {
         System.out.println();
         System.out.println("[PHASE] Initialize application repositories");
